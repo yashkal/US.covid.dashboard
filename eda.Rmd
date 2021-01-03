@@ -1,0 +1,212 @@
+---
+title: "R Notebook"
+output: html_notebook
+editor_options: 
+  chunk_output_type: console
+---
+
+I had found this data through "Data is Plural"
+
+On Monday, the Department of Health and Human Services released a dataset on coronavirus-related capacity at thousands of US hospitals —information the agency previously only published as state-level metrics. The self-reported, weekly-updated dataset quantifies various aspects of capacity, such as the number of staffed ICU beds and the number of beds occupied by patients with COVID-19. “This data is tremendously complex and is the result of substantial ongoing efforts,” notes an accompanying blog post. “We opted not to have perfect be the enemy of good, so these datasets will have imperfections.” Related: An FAQ “developed in collaboration with a group of data journalists, data scientists, and healthcare system researchers who have reviewed the data.” [h/t Ryan Panchadsaram]
+
+[Tweet](https://twitter.com/rypan/status/1336095555852767233)
+
+[Source](https://healthdata.gov/dataset/covid-19-reported-patient-impact-and-hospital-capacity-facility)
+
+[Github](https://github.com/CareSet/COVID_Hospital_PUF)
+
+[Data Dictionary](https://healthdata.gov/covid-19-reported-patient-impact-and-hospital-capacity-facility-data-dictionary)
+
+[Hospital Reporting FAQs](https://www.hhs.gov/sites/default/files/covid-19-faqs-hospitals-hospital-laboratory-acute-care-facility-data-reporting.pdf)
+
+[List of all hospitals location](https://hifld-geoplatform.opendata.arcgis.com/datasets/hospitals)
+
+```{r libraries}
+library(tidyverse)
+library(vroom)
+```
+
+Change -999,999 to NA values
+
+```{r read_and_clean_data}
+replace_with_NA_all <- function(df, formule) {
+  df[rlang::as_function(formule)(df)] <- NA
+  df
+}
+
+df <- read_csv("https://healthdata.gov/sites/default/files/reported_hospital_capacity_admissions_facility_level_weekly_average_timeseries_20201221_0.csv") %>% 
+  # No pediatric info
+  select(-contains("pediatric"))
+
+locations <- read_csv("https://opendata.arcgis.com/datasets/6ac5e325468c4cb9b905f1728d6fbf0f_0.csv?outSR=%7B%22latestWkid%22%3A3857%2C%22wkid%22%3A102100%7D")
+
+df <- df %>%
+  replace_with_NA_all(~ .x == -999999)
+```
+
+How many collection weeks are there
+
+```{r}
+df$collection_week %>% 
+  unique() %>% 
+  length()
+```
+
+Types of hospitals
+
+```{r}
+df %>% 
+  count(hospital_subtype)
+```
+
+# Combine with location data
+
+For now we will continue the analysis with names that fully match what is in the dataset. Using this method finds location of about
+`scales::label_percent() (length(intersect(df$hospital_name,locations$NAME))/length(unique(df$hospital_name)))`
+of hospitals in the dataset. There isn't a perfect match due to some differences in naming between the datasets. Some recommendations for further cleaning are
+
+- No periods (use ST vs ST.)
+- Clear some whitspace characters
+- Remove hypenated stuff (e.g. remove everything after and including " - " in the locations dataset)
+- Small portion matches ALT_NAME Variable
+- Maybe using "longest common substring" could find matches
+- Maybe use fuzzyjoin?
+
+Possibly need to hard code the last bit of information
+
+```{r eval=FALSE}
+
+# Count of hospital names in dataset
+length(unique(df$hospital_name))
+
+# Count of hospital locations found
+combined_names <- length(intersect(df$hospital_name, locations$NAME))
+length(intersect(df$hospital_name, locations$ALT_NAME))
+
+# Count of hospitals not in location
+length(setdiff(df$hospital_name, locations$NAME))
+
+setdiff(df$hospital_name, locations$NAME)
+setdiff(locations$NAME, df$hospital_name)
+intersect(df$hospital_name, locations$ALT_NAME)
+
+```
+
+# Plot sample map using census data and tmap
+
+Create the same county plots as in Carlson School of Management dashboard
+
+[Millions Of Older Americans Live In Counties With No ICU Beds As Pandemic Intensifies](https://khn.org/news/as-coronavirus-spreads-widely-millions-of-older-americans-live-in-counties-with-no-icu-beds/)
+
+```{r}
+library(sf)
+library(tigris)
+library(tmap)
+
+us_counties <- counties(cb = TRUE, resolution = "20m") %>% 
+  left_join(
+    fips_codes %>% 
+      select(starts_with("state")) %>% 
+      distinct() %>% 
+      as_tibble(),
+     by = c("STATEFP" = "state_code")
+  )
+
+# tmap_mode("view")
+us_counties %>% 
+  filter(state == "PA") %>%
+  tm_shape() +
+  tm_polygons()
+```
+
+# Calculating some metrics
+
+| Example Metrics for Adult Hospitalizations  | Formula |
+| ------------- | ------------- |
+| Does the hospital have any inpatient beds? | all_adult_hospital_inpatient_beds_7_day_avg > 0 |
+| How full is the hospital with adult confirmed and suspected COVID patients?  | total_adult_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg/ all_adult_hospital_inpatient_beds_7_day_avg |
+| Total staffed adult ICU bed fullness? (including COVID and non-COVID ICU usage)  | staffed_adult_icu_bed_occupancy_7_day_avg/ total_staffed_adult_icu_beds_7_day_avg  |
+| How full is the adult ICU of confirmed and suspected COVID patients? | staffed_icu_adult_patients_confirmed_and_suspected_covid_7_day_avg/ total_staffed_adult_icu_beds_7_day_avg  |
+| What proportion of currently hospitalized adult patients are COVID patients?  | total_adult_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg /all_adult_hospital_inpatient_bed_occupied_7_day_avg  |
+
+```{r}
+metrics_df <- df %>% 
+  mutate(
+    has_adult_inpatient_beds = all_adult_hospital_inpatient_beds_7_day_avg > 0,
+    has_staffed_adult_icu_beds = total_staffed_adult_icu_beds_7_day_avg > 0,
+    adult_covid_prop =
+      total_adult_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg/ all_adult_hospital_inpatient_beds_7_day_avg,
+    staffed_adult_icu_beds_prop = staffed_adult_icu_bed_occupancy_7_day_avg/ total_staffed_adult_icu_beds_7_day_avg,
+    staffed_adult_covid_icu_prop = staffed_icu_adult_patients_confirmed_and_suspected_covid_7_day_avg/ total_staffed_adult_icu_beds_7_day_avg) %>% 
+  select(hospital_pk:is_metro_micro, has_adult_inpatient_beds:last_col())
+
+metrics_df %>% View
+```
+
+Combine it with location data to make measurements
+
+```{r join_facility_locations}
+facility_locations <- metrics_df %>%
+  inner_join(locations, by = c("hospital_name" = "NAME")) %>%
+  st_as_sf(coords = c("LONGITUDE", "LATITUDE"), crs = "EPSG: 4269")
+
+facility_locations
+
+# rm(df)
+```
+
+Look at within each state at a time
+
+# Plan for dashboards
+
+- First tab will have descriptive stats
+  - Have filter based on state, region, etc
+  - Group by metro/micro areas
+  - no maps
+- Second tab will show overall US state map
+- Third tab will show by individual states broken by counties
+- Last tab will show changes in metrics over time
+
+```{r}
+knitr::knit_exit()
+```
+
+# Extra notes
+
+```{r plot_usmap, eval=FALSE}
+library(usmap)
+
+head(df$collection_week)
+# How full is the hospital with adult confirmed and suspected COVID patients?
+metric_1 <- df %>% 
+  filter(all_adult_hospital_inpatient_beds_7_day_avg != 0,
+         collection_week == "2020-12-11",
+         !is.na(total_adult_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg),
+         !is.na(all_adult_hospital_inpatient_beds_7_day_avg)) %>% 
+  group_by(fips_code) %>% 
+  summarize(percent_full = total_adult_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg/ all_adult_hospital_inpatient_beds_7_day_avg) %>% 
+  ungroup() %>% 
+  rename(fips = fips_code)
+
+metric_1
+
+plot_usmap(
+  data = metric_1, values = "percent_full", region = "counties",
+  include = "CA") + 
+  theme(legend.position = "right") +
+  scale_fill_gradient2(low = "white", mid = "orange", high = "red", midpoint = 0.5) +
+  labs(title = "How full is the hospital with adult confirmed and suspected COVID patients?")
+```
+
+Create the same map using tmap
+
+See this [issue](https://github.com/r-spatial/sf/issues/692) to see how to convert points to polygons
+
+```{r eval=FALSE}
+df_1 <- us_map(regions = "counties") %>% 
+  st_as_sf(coords=c("x","y")) %>% 
+  group_by(county, full, fips) %>% 
+  summarise(do_union = FALSE) %>% 
+  st_cast("POLYGON")
+```
+
