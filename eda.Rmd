@@ -140,7 +140,7 @@ metrics_df <- df %>%
     staffed_adult_covid_icu_prop = staffed_icu_adult_patients_confirmed_and_suspected_covid_7_day_avg/ total_staffed_adult_icu_beds_7_day_avg) %>% 
   select(hospital_pk:is_metro_micro, has_adult_inpatient_beds:last_col())
 
-metrics_df %>% View
+metrics_df
 ```
 
 Combine it with location data to make measurements
@@ -167,7 +167,23 @@ Look at within each state at a time
 - Third tab will show by individual states broken by counties
 - Last tab will show changes in metrics over time
 
+### Timeseries for facility
+
 ```{r}
+theme_set(theme_bw())
+
+metrics_df %>% 
+  select(collection_week, hospital_name, is_metro_micro:last_col()) %>% 
+  filter(hospital_name == "TEMPLE UNIVERSITY HOSPITAL") %>% 
+  ggplot(aes(x = collection_week, y = adult_covid_prop)) +
+  geom_point() +
+  geom_line() +
+  scale_y_continuous(labels = scales::label_percent()) +
+  labs(title = "How full is the hospital with adult confirmed and suspected COVID patients?", x = NULL, y = NULL)
+```
+
+
+```{r knit_exit}
 knitr::knit_exit()
 ```
 
