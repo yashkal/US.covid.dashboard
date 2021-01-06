@@ -19,6 +19,25 @@ On Monday, the Department of Health and Human Services released a dataset on cor
 
 [Hospital Reporting FAQs](https://www.hhs.gov/sites/default/files/covid-19-faqs-hospitals-hospital-laboratory-acute-care-facility-data-reporting.pdf)
 
+Questions from the FAQ found in the data:
+
+- **1 a,b,d**: Hospital information
+- **2 a,b**: # of inpatient and outpatient beds
+- **3 a,b**: # of inpatient beds
+- **4 a,b**: Inpatient bed occupancy
+- **5 a,b**: # of ICU beds
+- **6 a,b**: ICU bed occupancy
+- **9 a,b**: # of hospitalized adult COVID patients
+- **10 a,b**: # of hospitalized pediatric COVID patients
+- **12 a,b**: # of hospitalized adult COVID patients in ICU
+- **17 a-a9,b-b9**: Previous day adult COVID patient admission (to inpatient bed)
+- **18 a,b**: Previous day pediatric COVID patient admission (to inpatient bed)
+- **19**: Previous day ED visit
+- **20**: Previous day COVID-related ED visit
+- **33**: # of hospitalized adult influenza patients
+- **34**: Previous day adult influenza patient admission (to inpatient bed)
+- **35**: # of hospitalized adult influenza patients in ICU
+- **36**: # of hospitalized adult with COVID and influenza
 
 ```{r libraries}
 library(tidyverse)
