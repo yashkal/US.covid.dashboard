@@ -1,6 +1,8 @@
 library(tidyverse)
+library(vroom)
 library(shiny)
 library(shinycssloaders)
+
 theme_set(theme_bw())
 
 # Import ----
@@ -9,7 +11,7 @@ replace_with_NA_all <- function(df, formule) {
     df
 }
 
-df <- read_csv("https://healthdata.gov/sites/default/files/reported_hospital_capacity_admissions_facility_level_weekly_average_timeseries_20201221_0.csv") %>% 
+df <- vroom("https://healthdata.gov/sites/default/files/reported_hospital_capacity_admissions_facility_level_weekly_average_timeseries_20201221_0.csv") %>% 
     select(-contains("pediatric"))%>%
     replace_with_NA_all(~ .x == -999999)
 

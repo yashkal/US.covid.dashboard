@@ -19,7 +19,6 @@ On Monday, the Department of Health and Human Services released a dataset on cor
 
 [Hospital Reporting FAQs](https://www.hhs.gov/sites/default/files/covid-19-faqs-hospitals-hospital-laboratory-acute-care-facility-data-reporting.pdf)
 
-[List of all hospitals location](https://hifld-geoplatform.opendata.arcgis.com/datasets/hospitals)
 
 ```{r libraries}
 library(tidyverse)
@@ -34,14 +33,14 @@ replace_with_NA_all <- function(df, formule) {
   df
 }
 
-df <- read_csv("https://healthdata.gov/sites/default/files/reported_hospital_capacity_admissions_facility_level_weekly_average_timeseries_20201221_0.csv") %>% 
+df <- vroom("https://healthdata.gov/sites/default/files/reported_hospital_capacity_admissions_facility_level_weekly_average_timeseries_20201221_0.csv") %>% 
   # No pediatric info
-  select(-contains("pediatric"))
-
-locations <- read_csv("https://opendata.arcgis.com/datasets/6ac5e325468c4cb9b905f1728d6fbf0f_0.csv?outSR=%7B%22latestWkid%22%3A3857%2C%22wkid%22%3A102100%7D")
-
-df <- df %>%
+  select(-contains("pediatric")) %>%
   replace_with_NA_all(~ .x == -999999)
+
+# List of all hospital locations. Found at:
+# https://hifld-geoplatform.opendata.arcgis.com/datasets/hospitals
+locations <- vroom("https://opendata.arcgis.com/datasets/6ac5e325468c4cb9b905f1728d6fbf0f_0.csv?outSR=%7B%22latestWkid%22%3A3857%2C%22wkid%22%3A102100%7D")
 ```
 
 How many collection weeks are there
@@ -129,7 +128,7 @@ us_counties %>%
 | How full is the adult ICU of confirmed and suspected COVID patients? | staffed_icu_adult_patients_confirmed_and_suspected_covid_7_day_avg/ total_staffed_adult_icu_beds_7_day_avg  |
 | What proportion of currently hospitalized adult patients are COVID patients?  | total_adult_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg /all_adult_hospital_inpatient_bed_occupied_7_day_avg  |
 
-```{r}
+```{r metrics_df}
 metrics_df <- df %>% 
   mutate(
     has_adult_inpatient_beds = all_adult_hospital_inpatient_beds_7_day_avg > 0,
