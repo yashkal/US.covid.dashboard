@@ -116,27 +116,6 @@ Create the same county plots as in Carlson School of Management dashboard
 
 [Millions Of Older Americans Live In Counties With No ICU Beds As Pandemic Intensifies](https://khn.org/news/as-coronavirus-spreads-widely-millions-of-older-americans-live-in-counties-with-no-icu-beds/)
 
-```{r}
-library(sf)
-library(tigris)
-library(tmap)
-
-us_counties <- counties(cb = TRUE, resolution = "20m") %>% 
-  left_join(
-    fips_codes %>% 
-      select(starts_with("state")) %>% 
-      distinct() %>% 
-      as_tibble(),
-     by = c("STATEFP" = "state_code")
-  )
-
-# tmap_mode("view")
-us_counties %>% 
-  filter(state == "PA") %>%
-  tm_shape() +
-  tm_polygons()
-```
-
 # Calculating some metrics
 
 | Example Metrics for Adult Hospitalizations  | Formula |
@@ -152,6 +131,7 @@ metrics_df <- df %>%
   mutate(
     has_adult_inpatient_beds = all_adult_hospital_inpatient_beds_7_day_avg > 0,
     has_staffed_adult_icu_beds = total_staffed_adult_icu_beds_7_day_avg > 0,
+    new_cases_confirmed_or_suspected = sum(previous_day_admission_adult_covid_confirmed_7_day_sum, na.rm = TRUE),
     adult_covid_prop =
       total_adult_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg/ all_adult_hospital_inpatient_beds_7_day_avg,
     staffed_adult_icu_beds_prop = staffed_adult_icu_bed_occupancy_7_day_avg/ total_staffed_adult_icu_beds_7_day_avg,
@@ -184,6 +164,45 @@ Look at within each state at a time
 - Second tab will show overall US state map
 - Third tab will show by individual states broken by counties
 - Last tab will show changes in metrics over time
+
+### County level breakdown
+
+Below will be a sample state map broken by counties for Pennsylvania
+
+```{r county_metrics}
+library(sf)
+library(tigris)
+library(tmap)
+
+county_metrics <- metrics_df %>%
+  filter(collection_week == "2020-12-11",
+         state == "PA") %>% 
+  mutate(across(where(is.numeric), ~ ifelse(is.nan(.x) | is.infinite(.x), NA, .x))) %>% 
+  group_by(fips_code) %>% 
+  summarize(
+    hospital_count = sum(!is.na(new_cases_confirmed_or_suspected)),
+    new_cases_confirmed_or_suspected = sum(new_cases_confirmed_or_suspected, na.rm = TRUE)
+    )
+  
+us_counties <- counties(cb = TRUE, resolution = "20m") %>% 
+  left_join(
+    fips_codes %>% 
+      select(starts_with("state")) %>% 
+      distinct() %>% 
+      as_tibble(),
+     by = c("STATEFP" = "state_code")
+  ) %>% 
+  mutate(fips_code = paste0(STATEFP, COUNTYFP)) %>% 
+  select(NAME, fips_code, state)
+
+tmap_mode("view")
+us_counties %>% 
+  filter(state == "PA") %>%
+  left_join(county_metrics, by = "fips_code") %>% 
+  tm_shape() +
+  tm_polygons("new_cases_confirmed_or_suspected")
+```
+
 
 ### Timeseries for facility
 
