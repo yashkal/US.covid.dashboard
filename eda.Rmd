@@ -2,7 +2,7 @@
 title: "R Notebook"
 output: html_notebook
 editor_options: 
-  chunk_output_type: console
+  chunk_output_type: inline
 ---
 
 I had found this data through "Data is Plural"
@@ -39,14 +39,17 @@ Questions from the FAQ found in the data:
 - **35**: # of hospitalized adult influenza patients in ICU
 - **36**: # of hospitalized adult with COVID and influenza
 
-```{r libraries}
+```{r libraries, message=FALSE}
 library(tidyverse)
 library(vroom)
+library(sf)
+library(tigris)
+library(tmap)
 ```
 
-Change -999,999 to NA values
+The imported data will have some data cleaning steps. First, we will remove columns related to pediatric patients and change numeric -999,999 values to NA.
 
-```{r read_and_clean_data}
+```{r read_and_clean_data, message=FALSE}
 replace_with_NA_all <- function(df, formule) {
   df[rlang::as_function(formule)(df)] <- NA
   df
@@ -62,25 +65,26 @@ df <- vroom("https://healthdata.gov/sites/default/files/reported_hospital_capaci
 locations <- vroom("https://opendata.arcgis.com/datasets/6ac5e325468c4cb9b905f1728d6fbf0f_0.csv?outSR=%7B%22latestWkid%22%3A3857%2C%22wkid%22%3A102100%7D")
 ```
 
-How many collection weeks are there
-
-```{r}
-df$collection_week %>% 
-  unique() %>% 
-  length()
-```
-
-Types of hospitals
+This dataset contains
+`r df$collection_week %>% unique() %>% length()`
+weeks worth of data ( from
+`r min(df$collection_week)`
+to
+`r max(df$collection_week)`
+). There are 
+`r df$hospital_pk %>% unique() %>% length()`
+hospitals reporting, and are broken down by the following types:
 
 ```{r}
 df %>% 
+  distinct(hospital_pk, hospital_subtype) %>% 
   count(hospital_subtype)
 ```
 
 # Combine with location data
 
 For now we will continue the analysis with names that fully match what is in the dataset. Using this method finds location of about
-`scales::label_percent() (length(intersect(df$hospital_name,locations$NAME))/length(unique(df$hospital_name)))`
+`r scales::label_percent() (length(intersect(df$hospital_name,locations$NAME))/length(unique(df$hospital_name)))`
 of hospitals in the dataset. There isn't a perfect match due to some differences in naming between the datasets. Some recommendations for further cleaning are
 
 - No periods (use ST vs ST.)
@@ -92,7 +96,7 @@ of hospitals in the dataset. There isn't a perfect match due to some differences
 
 Possibly need to hard code the last bit of information
 
-```{r eval=FALSE}
+```{r eval=FALSE, show=FALSE}
 
 # Count of hospital names in dataset
 length(unique(df$hospital_name))
@@ -116,11 +120,10 @@ Create the same county plots as in Carlson School of Management dashboard
 
 [Millions Of Older Americans Live In Counties With No ICU Beds As Pandemic Intensifies](https://khn.org/news/as-coronavirus-spreads-widely-millions-of-older-americans-live-in-counties-with-no-icu-beds/)
 
-# Calculating some metrics
+## Calculating some metrics
 
 | Example Metrics for Adult Hospitalizations  | Formula |
 | ------------- | ------------- |
-| Does the hospital have any inpatient beds? | all_adult_hospital_inpatient_beds_7_day_avg > 0 |
 | How full is the hospital with adult confirmed and suspected COVID patients?  | total_adult_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg/ all_adult_hospital_inpatient_beds_7_day_avg |
 | Total staffed adult ICU bed fullness? (including COVID and non-COVID ICU usage)  | staffed_adult_icu_bed_occupancy_7_day_avg/ total_staffed_adult_icu_beds_7_day_avg  |
 | How full is the adult ICU of confirmed and suspected COVID patients? | staffed_icu_adult_patients_confirmed_and_suspected_covid_7_day_avg/ total_staffed_adult_icu_beds_7_day_avg  |
@@ -129,21 +132,17 @@ Create the same county plots as in Carlson School of Management dashboard
 ```{r metrics_df}
 metrics_df <- df %>% 
   mutate(
-    has_adult_inpatient_beds = all_adult_hospital_inpatient_beds_7_day_avg > 0,
-    has_staffed_adult_icu_beds = total_staffed_adult_icu_beds_7_day_avg > 0,
     new_cases_confirmed_or_suspected = sum(previous_day_admission_adult_covid_confirmed_7_day_sum, na.rm = TRUE),
     adult_covid_prop =
       total_adult_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg/ all_adult_hospital_inpatient_beds_7_day_avg,
     staffed_adult_icu_beds_prop = staffed_adult_icu_bed_occupancy_7_day_avg/ total_staffed_adult_icu_beds_7_day_avg,
     staffed_adult_covid_icu_prop = staffed_icu_adult_patients_confirmed_and_suspected_covid_7_day_avg/ total_staffed_adult_icu_beds_7_day_avg) %>% 
-  select(hospital_pk:is_metro_micro, has_adult_inpatient_beds:last_col())
+  select(hospital_pk:is_metro_micro, new_cases_confirmed_or_suspected:last_col())
 
 metrics_df
 ```
 
-Combine it with location data to make measurements
-
-```{r join_facility_locations}
+```{r join_facility_locations, eval=FALSE}
 facility_locations <- metrics_df %>%
   inner_join(locations, by = c("hospital_name" = "NAME")) %>%
   st_as_sf(coords = c("LONGITUDE", "LATITUDE"), crs = "EPSG: 4269")
@@ -152,8 +151,6 @@ facility_locations
 
 # rm(df)
 ```
-
-Look at within each state at a time
 
 # Plan for dashboards
 
@@ -169,11 +166,7 @@ Look at within each state at a time
 
 Below will be a sample state map broken by counties for Pennsylvania
 
-```{r county_metrics}
-library(sf)
-library(tigris)
-library(tmap)
-
+```{r county_metrics, message=FALSE, warning=FALSE}
 county_metrics <- metrics_df %>%
   filter(collection_week == "2020-12-11",
          state == "PA") %>% 
