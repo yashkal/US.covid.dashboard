@@ -132,7 +132,7 @@ Create the same county plots as in Carlson School of Management dashboard
 ```{r metrics_df}
 metrics_df <- df %>% 
   mutate(
-    new_cases_confirmed_or_suspected = sum(previous_day_admission_adult_covid_confirmed_7_day_sum, na.rm = TRUE),
+    new_cases_confirmed_or_suspected = previous_day_admission_adult_covid_confirmed_7_day_sum + previous_day_admission_adult_covid_suspected_7_day_sum,
     adult_covid_prop =
       total_adult_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg/ all_adult_hospital_inpatient_beds_7_day_avg,
     staffed_adult_icu_beds_prop = staffed_adult_icu_bed_occupancy_7_day_avg/ total_staffed_adult_icu_beds_7_day_avg,
