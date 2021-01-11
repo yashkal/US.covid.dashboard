@@ -154,13 +154,17 @@ facility_locations
 
 # Plan for dashboards
 
-- First tab will have descriptive stats
+- (TODO) There should be an introduction or documentation page
+- (TODO) First tab will have descriptive stats
   - Have filter based on state, region, etc
   - Group by metro/micro areas
   - no maps
-- Second tab will show overall US state map
-- Third tab will show by individual states broken by counties
+- Second tab will show by individual states broken by counties
+  - Interactive
+  - (TODO) Will include hospital locations as well
+  - (TODO) Will also contain a table to include data for hospitals without locations
 - Last tab will show changes in metrics over time
+  - (TODO) Add options to choose metrics (e.g. new cases, percent full, etc.)
 
 ### County level breakdown
 
