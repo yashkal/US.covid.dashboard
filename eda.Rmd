@@ -1,17 +1,41 @@
 ---
 title: "R Notebook"
-output: html_notebook
-editor_options: 
+output:
+  html_document:
+    df_print: paged
+    code_folding: "hide"
+editor_options:
   chunk_output_type: inline
 ---
 
+```{r setup, include=FALSE}
+library(tidyverse)
+knitr::opts_chunk$set(echo = TRUE, cache=TRUE)
+```
+
+# Plan for dashboards
+
+- (TODO) There should be an introduction or documentation page
+- (TODO) First tab will have descriptive stats
+  - Have filter based on state, region, etc
+  - Group by metro/micro areas
+  - no maps
+- Second tab will show by individual states broken by counties
+  - Interactive
+  - (TODO) Will include hospital locations as well
+  - (TODO) Will also contain a table to include data for hospitals without locations
+- Last tab will show changes in metrics over time
+  - (TODO) Add options to choose metrics (e.g. new cases, percent full, etc.)
+
+# Introduction
+
 I had found this data through "Data is Plural"
 
-On Monday, the Department of Health and Human Services released a dataset on coronavirus-related capacity at thousands of US hospitals —information the agency previously only published as state-level metrics. The self-reported, weekly-updated dataset quantifies various aspects of capacity, such as the number of staffed ICU beds and the number of beds occupied by patients with COVID-19. “This data is tremendously complex and is the result of substantial ongoing efforts,” notes an accompanying blog post. “We opted not to have perfect be the enemy of good, so these datasets will have imperfections.” Related: An FAQ “developed in collaboration with a group of data journalists, data scientists, and healthcare system researchers who have reviewed the data.” [h/t Ryan Panchadsaram]
+> On Monday, the Department of Health and Human Services released a dataset on coronavirus-related capacity at thousands of US hospitals —information the agency previously only published as state-level metrics. The self-reported, weekly-updated dataset quantifies various aspects of capacity, such as the number of staffed ICU beds and the number of beds occupied by patients with COVID-19. “This data is tremendously complex and is the result of substantial ongoing efforts,” notes an accompanying blog post. “We opted not to have perfect be the enemy of good, so these datasets will have imperfections.” Related: An FAQ “developed in collaboration with a group of data journalists, data scientists, and healthcare system researchers who have reviewed the data.” [h/t Ryan Panchadsaram]
 
 [Tweet](https://twitter.com/rypan/status/1336095555852767233)
 
-[Source](https://healthdata.gov/dataset/covid-19-reported-patient-impact-and-hospital-capacity-facility)
+[Source](https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/anag-cw7u)
 
 [Github](https://github.com/CareSet/COVID_Hospital_PUF)
 
@@ -55,7 +79,7 @@ replace_with_NA_all <- function(df, formule) {
   df
 }
 
-df <- vroom("https://healthdata.gov/sites/default/files/reported_hospital_capacity_admissions_facility_level_weekly_average_timeseries_20201221_0.csv") %>% 
+df <- vroom("https://healthdata.gov/api/views/anag-cw7u/rows.csv?accessType=DOWNLOAD") %>% 
   # No pediatric info
   select(-contains("pediatric")) %>%
   replace_with_NA_all(~ .x == -999999)
@@ -66,13 +90,13 @@ locations <- vroom("https://opendata.arcgis.com/datasets/6ac5e325468c4cb9b905f17
 ```
 
 This dataset contains
-`r df$collection_week %>% unique() %>% length()`
+`r length(unique(df$collection_week))`
 weeks worth of data ( from
 `r min(df$collection_week)`
 to
 `r max(df$collection_week)`
-). There are 
-`r df$hospital_pk %>% unique() %>% length()`
+). There are
+`r length(unique(df$hospital_pk))`
 hospitals reporting, and are broken down by the following types:
 
 ```{r}
@@ -81,40 +105,9 @@ df %>%
   count(hospital_subtype)
 ```
 
-# Combine with location data
-
-For now we will continue the analysis with names that fully match what is in the dataset. Using this method finds location of about
-`r scales::label_percent() (length(intersect(df$hospital_name,locations$NAME))/length(unique(df$hospital_name)))`
-of hospitals in the dataset. There isn't a perfect match due to some differences in naming between the datasets. Some recommendations for further cleaning are
-
-- No periods (use ST vs ST.)
-- Clear some whitspace characters
-- Remove hypenated stuff (e.g. remove everything after and including " - " in the locations dataset)
-- Small portion matches ALT_NAME Variable
-- Maybe using "longest common substring" could find matches
-- Maybe use fuzzyjoin?
-
-Possibly need to hard code the last bit of information
-
-```{r eval=FALSE, show=FALSE}
-
-# Count of hospital names in dataset
-length(unique(df$hospital_name))
-
-# Count of hospital locations found
-combined_names <- length(intersect(df$hospital_name, locations$NAME))
-length(intersect(df$hospital_name, locations$ALT_NAME))
-
-# Count of hospitals not in location
-length(setdiff(df$hospital_name, locations$NAME))
-
-setdiff(df$hospital_name, locations$NAME)
-setdiff(locations$NAME, df$hospital_name)
-intersect(df$hospital_name, locations$ALT_NAME)
-
-```
-
 # Plot sample map using census data and tmap
+
+They have recently updated the information to include geocoded addresses. This information contains the latitude and longitude of the hospitals
 
 Create the same county plots as in Carlson School of Management dashboard
 
@@ -142,7 +135,7 @@ metrics_df <- df %>%
 metrics_df
 ```
 
-```{r join_facility_locations, eval=FALSE}
+```{r join_facility_locations}
 facility_locations <- metrics_df %>%
   inner_join(locations, by = c("hospital_name" = "NAME")) %>%
   st_as_sf(coords = c("LONGITUDE", "LATITUDE"), crs = "EPSG: 4269")
@@ -151,20 +144,6 @@ facility_locations
 
 # rm(df)
 ```
-
-# Plan for dashboards
-
-- (TODO) There should be an introduction or documentation page
-- (TODO) First tab will have descriptive stats
-  - Have filter based on state, region, etc
-  - Group by metro/micro areas
-  - no maps
-- Second tab will show by individual states broken by counties
-  - Interactive
-  - (TODO) Will include hospital locations as well
-  - (TODO) Will also contain a table to include data for hospitals without locations
-- Last tab will show changes in metrics over time
-  - (TODO) Add options to choose metrics (e.g. new cases, percent full, etc.)
 
 ### County level breakdown
 
@@ -197,7 +176,9 @@ us_counties %>%
   filter(state == "PA") %>%
   left_join(county_metrics, by = "fips_code") %>% 
   tm_shape() +
-  tm_polygons("new_cases_confirmed_or_suspected")
+  tm_polygons("new_cases_confirmed_or_suspected") +
+  tm_shape(facility_locations %>% filter(state == "PA")) +
+  tm_dots()
 ```
 
 

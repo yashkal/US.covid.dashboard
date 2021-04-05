@@ -4,7 +4,7 @@ replace_with_NA_all <- function(df, formule) {
   df
 }
 
-df <- vroom("https://healthdata.gov/sites/default/files/reported_hospital_capacity_admissions_facility_level_weekly_average_timeseries_20201221_0.csv") %>% 
+df <- vroom("https://healthdata.gov/api/views/anag-cw7u/rows.csv?accessType=DOWNLOAD") %>% 
   select(-contains("pediatric"))%>%
   replace_with_NA_all(~ .x == -999999)
 
