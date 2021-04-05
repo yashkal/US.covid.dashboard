@@ -5,7 +5,7 @@ output:
     df_print: paged
     code_folding: "hide"
 editor_options:
-  chunk_output_type: inline
+  chunk_output_type: console
 ---
 
 ```{r setup, include=FALSE}
@@ -71,22 +71,13 @@ library(tigris)
 library(tmap)
 ```
 
-The imported data will have some data cleaning steps. First, we will remove columns related to pediatric patients and change numeric -999,999 values to NA.
+The imported data will have some data cleaning steps. First, we will remove columns related to pediatric patients and change numeric -999,999 values to NA. 
+This is done in the data loading file.
 
 ```{r read_and_clean_data, message=FALSE}
-replace_with_NA_all <- function(df, formule) {
-  df[rlang::as_function(formule)(df)] <- NA
-  df
-}
-
-df <- vroom("https://healthdata.gov/api/views/anag-cw7u/rows.csv?accessType=DOWNLOAD") %>% 
+df <- vroom("data/reported_weekly_facility_level_capacity.csv") %>% 
   # No pediatric info
-  select(-contains("pediatric")) %>%
-  replace_with_NA_all(~ .x == -999999)
-
-# List of all hospital locations. Found at:
-# https://hifld-geoplatform.opendata.arcgis.com/datasets/hospitals
-locations <- vroom("https://opendata.arcgis.com/datasets/6ac5e325468c4cb9b905f1728d6fbf0f_0.csv?outSR=%7B%22latestWkid%22%3A3857%2C%22wkid%22%3A102100%7D")
+  select(-contains("pediatric"))
 ```
 
 This dataset contains

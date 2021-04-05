@@ -1,8 +1,6 @@
 # Import ----
-replace_with_NA_all <- function(df, formule) {
-  df[rlang::as_function(formule)(df)] <- NA
-  df
-}
+df <- vroom("data/reported_weekly_facility_level_capacity.csv") %>% 
+  select(-contains("pediatric"))
 
 df <- vroom("https://healthdata.gov/api/views/anag-cw7u/rows.csv?accessType=DOWNLOAD") %>% 
   select(-contains("pediatric"))%>%
