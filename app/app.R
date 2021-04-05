@@ -25,7 +25,7 @@ facility_plots <- sidebarLayout(
     sidebarPanel(
         selectInput(
             "facility", "Choose facility:",
-            sort(unique(metrics_df$hospital_name)))
+            sort(unique(metrics_df$augmented_name)))
     ),
     mainPanel(plotOutput("time_series_plot") %>% withSpinner())
 )
@@ -49,7 +49,7 @@ server <- function(input, output) {
     output$time_series_plot <- renderPlot({
         metrics_df %>% 
             select(collection_week, hospital_name, is_metro_micro:last_col()) %>% 
-            filter(hospital_name == input$facility) %>% 
+            filter(augmented_name == input$facility) %>% 
             ggplot(aes(x = collection_week, y = adult_covid_prop)) +
             geom_point() +
             geom_line() +

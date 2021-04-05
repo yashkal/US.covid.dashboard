@@ -90,10 +90,18 @@ to
 `r length(unique(df$hospital_pk))`
 hospitals reporting, and are broken down by the following types:
 
+There are many hospitals with the same name, so it's important to augment those with city and state information. A separate column will be added for this convenience.
+
 ```{r}
-df %>% 
-  distinct(hospital_pk, hospital_subtype) %>% 
-  count(hospital_subtype)
+augmented_names <- df %>% 
+  distinct(hospital_pk, hospital_name, city, state) %>% 
+  add_count(hospital_name) %>% 
+  filter(n > 1) %>% 
+  arrange(desc(n), hospital_name) %>% 
+  mutate(augmented_name = glue::glue("{hospital_name} ({city}, {state})")) %>% 
+  select(hospital_pk, augmented_name)
+
+df <- df %>% left_join(augmented_names)
 ```
 
 # Plot sample map using census data and tmap
