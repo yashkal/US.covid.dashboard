@@ -1,20 +1,10 @@
-library(tidyverse)
-library(vroom)
-
-replace_with_NA_all <- function(df, formule) {
-  df[rlang::as_function(formule)(df)] <- NA
-  df
-}
-
-fp <- tempfile()
+data_url <- "https://healthdata.gov/api/views/anag-cw7u/rows.csv?accessType=DOWNLOAD"
 
 download.file(
-  url = "https://healthdata.gov/api/views/anag-cw7u/rows.csv?accessType=DOWNLOAD",
-  destfile = fp
+  url = data_url,
+  destfile = "data/reported_weekly_facility_level_capacity.csv"
 )
 
-df <- vroom(fp) %>% 
-  replace_with_NA_all(~ .x == -999999)
-
-write_csv(df, "data/reported_weekly_facility_level_capacity.csv")
-write_csv(df, "app/data/reported_weekly_facility_level_capacity.csv")
+file.copy(from = "data/reported_weekly_facility_level_capacity.csv",
+          to = "app/data/reported_weekly_facility_level_capacity.csv",
+          overwrite = TRUE)
