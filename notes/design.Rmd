@@ -1,0 +1,297 @@
+---
+title: "Dashboard Design"
+output:
+  html_document:
+    df_print: paged
+    code_folding: "hide"
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+# Plan for dashboards
+
+The plan for the application will allow users see information at a high level, and then be able to drill down at the hospital level for detailed information.
+
+- (TODO) First tab will have high level descriptive stats
+  - Includes info boxes highlighting changes (absolute and % change). The user will be able to toggle how far back to view changes (e.g. yesterday, a week, 30 days, 90 days)
+    - Total Cases
+    - New Cases
+    - New Deaths
+    - Maybe list states not reported in this information?
+  - Shows an interactive map of states that report hospital staffing shortages and other metrics
+- (TODO) Second tab will show US map broken by states
+  - (TODO) Will include hospital locations as well
+  - (TODO) Will also contain a table to include data for hospitals without locations
+- Last tab will show changes in metrics over time for individual hospitals
+  - (TODO) Add options to choose metrics (e.g. new cases, percent full, etc.)
+- (TODO) Last tab will be a documentation page
+  - Shows users how the app is organized/how to use it
+  - Detail sources used for the application
+  - Disclaimer for data not including some hospitals
+
+Important information to consider (all need to have disclaimer for possible incomplete reporting):
+
+- Descriptive Statistics for cases and deaths (used for info boxes)
+  - Cumulative
+  - Change from last 7 days
+  - Percent change from last 7 days
+- National Time series (New and total)
+  - Hospital admissions (suspected and confirmed)
+  - Cases
+  - Deaths
+  - Vaccinations
+  - Viral (RT-PCR) Lab Test Positivity
+- Cases by state/county for above metrics. Consider being able to compare values using cases per 100k
+  - Add markers for individual hospitals as well
+- Have a page for hospital metrics (disclaimer)
+
+```{r load_libraries}
+library(tidyverse)
+library(vroom)
+library(sf)
+library(tigris)
+library(tmap)
+```
+
+# National Level Charts
+
+HHS produces a community profile through core based statistical areas CBSA
+. Take a look at the [National Community Profile Report](https://healthdata.gov/Health/COVID-19-Community-Profile-Report/gqxm-d9w9). There are also reports at the state level, for example, [here is one for New Hampshire](https://docs.google.com/viewerng/viewer?url=https://healthdata.gov/api/views/62ta-rvvi/files/dfc0ee76-e514-42b5-85f3-403699b43fd3)
+
+Some of the calculations provided for these reports can be found online. The table below details the latest information that can be found.
+
+```{r cpr_national_stats_summary}
+# Load data
+cpr_national <- vroom("https://healthdata.gov/api/views/gzn6-r8g2/rows.csv?accessType=DOWNLOAD")
+
+latest_cases_deaths <- vroom("https://data.cdc.gov/api/views/9mfq-cb36/rows.csv?accessType=DOWNLOAD") %>% 
+  mutate(submission_date = lubridate::mdy(submission_date)) %>% 
+  filter(submission_date >= max(submission_date) - lubridate::days(7))
+
+# Combine stats
+national_summary_stats <- cpr_national %>% 
+  mutate(
+    tot_cases = latest_cases_deaths %>%
+      filter(submission_date == max(submission_date)) %>% 
+      pull(tot_cases) %>% 
+      sum(),
+    tot_death = latest_cases_deaths %>% 
+      filter(submission_date == max(submission_date)) %>% 
+      pull(tot_death) %>% 
+      sum()
+  ) %>% 
+  pivot_longer(everything())
+
+# Print to table
+national_summary_stats %>% 
+  gt::gt()
+```
+
+All sources do not have dates updated at the same time, although they should not be more than one day apart. The update date for the Community Profile Report can be found on the source page, although some Javascript may be needed to pull this information. Below is the date for the latest infomration on cases and deaths by state.
+
+```{r extracting_date_updated}
+# Updated date
+latest_cases_deaths %>% 
+  pull(submission_date) %>% 
+  max() %>% 
+  unique()
+
+# DOES NOT RUN
+# Attempt to get updated dates for time series since they can be slightly different
+# test <- read_html("https://healthdata.gov/dataset/COVID-19-Community-Profile-Report-National-Level/gzn6-r8g2") 
+# 
+# test %>% 
+#   html_elements(".date") %>% 
+#   html_text()
+```
+
+# County level metrics
+
+There is also CPR detailing information at the county level. These can can important when developing interactive maps. This should be detailed when querying state or county level information.
+
+```{r cpr_county, eval = FALSE}
+cpr_county <- vroom("https://healthdata.gov/api/views/di4u-7yu6/rows.csv?accessType=DOWNLOAD")
+```
+
+
+# Facility level metrics
+
+The above metrics come from facility level data.
+
+```{r read_and_clean_data, message=FALSE, warning=FALSE}
+df <- vroom(here::here("data","reported_weekly_facility_level_capacity.csv")) %>%
+  select(hospital_pk:is_metro_micro, inpatient_beds_7_day_sum, 
+         ends_with("avg"), starts_with("previous"),
+         geocoded_hospital_address)
+```
+
+The imported data will have some data cleaning steps. First, we will remove columns related to pediatric patients and change numeric -999,999 values to NA. 
+This is done in the data loading file.
+
+```{r impute_999999_values}
+impute_999999_values <- function(df, formule) {
+  df[rlang::as_function(formule)(df)] <- 0
+  df
+}
+
+df <- df %>% 
+  impute_999999_values(~ .x == -999999)
+```
+
+The following are calculations for possibly important metrics when finding insights at the facility level.
+
+| Example Metrics for Adult Hospitalizations  | Formula |
+| ------------- | ------------- |
+| Hospital admissions | previous_day_admission_adult_covid_confirmed_7_day_sum + previous_day_admission_adult_covid_suspected_7_day_sum +  previous_day_admission_pediatric_covid_confirmed_7_day_sum + previous_day_admission_pediatric_covid_suspected_7_day_sum |
+| % Inpatient beds utilized | inpatient_beds_used/inpatient_beds |    
+| % Hospital beds occupied by COVID-19 patients | (total_adult_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg + total_pediatric_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg)/inpatient_beds_7_day_avg |
+| % Inpatient beds occupied by adult COVID patients  | total_adult_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg/ all_adult_hospital_inpatient_beds_7_day_avg |
+| % Utilized inpatient beds that are for COVID patients | total_adult_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg /all_adult_hospital_inpatient_bed_occupied_7_day_avg  |
+| % Adult ICU bed usage (COVID and non-COVID occupied)  | staffed_adult_icu_bed_occupancy_7_day_avg/ total_staffed_adult_icu_beds_7_day_avg  |
+| % Staffed adult ICU bed usage (COVID occupied only) | staffed_icu_adult_patients_confirmed_and_suspected_covid_7_day_avg/ total_staffed_adult_icu_beds_7_day_avg  |
+
+```{r metrics_df}
+hospital_metrics <- df %>% 
+  mutate(
+    # Hospital admissions
+    hospital_admissions = previous_day_admission_adult_covid_confirmed_7_day_sum + previous_day_admission_adult_covid_suspected_7_day_sum +  previous_day_admission_pediatric_covid_confirmed_7_day_sum + previous_day_admission_pediatric_covid_suspected_7_day_sum,
+    # % Hospital beds occupied by COVID-19 patients
+    beds_covid_occupied = (total_adult_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg + total_pediatric_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg)/inpatient_beds_7_day_avg,
+    # % Inpatient beds occupied by adult COVID patients
+    inpatient_beds_covid_occupied = total_adult_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg/ all_adult_hospital_inpatient_beds_7_day_avg,
+    # % Adult inpatient care that are COVID patient
+    inpatient_care_covid_prop = total_adult_patients_hospitalized_confirmed_and_suspected_covid_7_day_avg /all_adult_hospital_inpatient_bed_occupied_7_day_avg,
+    # % Staffed adult ICU bed usage (COVID and non-COVID occupied)
+    icu_capacity_used = staffed_adult_icu_bed_occupancy_7_day_avg/ total_staffed_adult_icu_beds_7_day_avg,
+    # % Staffed adult ICU bed usage (COVID occupied only)
+    icu_capacity_covid_used = staffed_icu_adult_patients_confirmed_and_suspected_covid_7_day_avg/ total_staffed_adult_icu_beds_7_day_avg,
+    # New COVID cases confirmed or suspected in the past week
+    new_cases_confirmed_or_suspected = previous_day_admission_adult_covid_confirmed_7_day_sum + previous_day_admission_adult_covid_suspected_7_day_sum
+  ) %>% 
+  select(hospital_pk:is_metro_micro, inpatient_beds_7_day_avg, hospital_admissions:last_col())
+```
+
+# State level breakdown
+
+Variables available in state is similar to the county level data, in that they both attempt to address "patient impact and hospital capacity," although not identical. For example, state level information records the number of hospitals expecting a staffing shortage. State level information is also aggregated daily (using information collected from last 4 days)
+
+```{r}
+state_utilization <- vroom("https://healthdata.gov/api/views/6xf2-c3ie/rows.csv?accessType=DOWNLOAD")
+```
+
+```{r}
+state_utilization_metrics <-  state_utilization %>% 
+  # Staffing shortage metrics
+  mutate(perc_staffing_shortage = critical_staffing_shortage_today_yes/(critical_staffing_shortage_today_yes + critical_staffing_shortage_today_no)) %>% 
+  # Metrics convertible to readable labels
+  mutate(
+    shortage = glue::glue("{critical_staffing_shortage_today_yes}/{critical_staffing_shortage_today_yes + critical_staffing_shortage_today_no} ({critical_staffing_shortage_today_not_reported} NR)"),
+    anticipated_shortage = paste(critical_staffing_shortage_anticipated_within_week_yes, critical_staffing_shortage_anticipated_within_week_yes +  critical_staffing_shortage_anticipated_within_week_no, sep = "/"),
+    perc_inpatient_beds_used = inpatient_beds_used / inpatient_beds,
+    frac_inpatient_beds_used = paste(inpatient_beds_used, inpatient_beds, sep = "/")
+  )
+
+us_states <- states(cb = TRUE, resolution = "20m", progress_bar = FALSE)
+
+conus <- us_states %>% 
+  filter(NAME %in% setdiff(state.name, c("Hawaii", "Alaska"))) %>% 
+  st_bbox()
+```
+
+```{r}
+tmap_mode("view")
+us_states %>% 
+  left_join(state_utilization_metrics, by = c("STUSPS" = "state")) %>% 
+  tm_shape(bbox = conus) +
+  tm_polygons("perc_staffing_shortage", id = "NAME", palette = "Oranges", 
+              popup.vars = c(
+                "Hospitals with staffing shortage" = "shortage",
+                "Hospitals anticipating shortage" = "anticipated_shortage",
+                "Inpatient beds used" = "perc_inpatient_beds_used"))
+```
+
+# Timeseries for facility
+
+There are many hospitals with the same name, so it's important to augment those with city and state information. A separate column will be added for this convenience when selecting hospitals from the shiny app.
+
+
+```{r location_info}
+# Keep locations in separate dataframe
+locations <- df %>%
+  distinct(hospital_pk, state, city, address, zip, geocoded_hospital_address) %>% 
+  replace_na(list(geocoded_hospital_address = "POINT EMPTY")) %>%
+  st_as_sf(wkt = "geocoded_hospital_address", na.fail = FALSE)
+
+
+# Remove corresponding column in df 
+df <- df %>% 
+  select(-c(state, city, address, zip,geocoded_hospital_address))
+
+# left_join(locations, df, by = "hospital_pk", left = FALSE)
+```
+
+
+```{r augment_names}
+augmented_names <- df %>% 
+  left_join(locations) %>% 
+  distinct(hospital_pk, hospital_name, city, state) %>% 
+  add_count(hospital_name) %>% 
+  filter(n > 1) %>% 
+  arrange(desc(n), hospital_name) %>% 
+  mutate(augmented_name = glue::glue("{hospital_name} ({city}, {state})")) %>% 
+  select(hospital_pk, augmented_name)
+
+df <- df %>% left_join(augmented_names, by = "hospital_pk")
+```
+
+
+```{r}
+theme_set(theme_bw())
+
+hospital_metrics %>% 
+  select(collection_week, hospital_name, is_metro_micro:last_col()) %>% 
+  filter(hospital_name == "TEMPLE UNIVERSITY HOSPITAL") %>% 
+  ggplot(aes(x = collection_week, y = beds_covid_occupied)) +
+  geom_point() +
+  geom_line() +
+  scale_y_continuous(labels = scales::label_percent()) +
+  labs(title = "How full is the hospital with adult confirmed and suspected COVID patients?", x = NULL, y = NULL)
+```
+
+
+# Historial Information
+
+```{r state_timeseries}
+# Timeseries for state
+state_utilization_timeseries <- vroom("https://healthdata.gov/api/views/g62h-syeh/rows.csv?accessType=DOWNLOAD")
+```
+
+
+```{r daily_hospital_admissions}
+theme_set(theme_bw())
+state_utilization_timeseries %>% 
+  filter(date > lubridate::mdy("Aug 01 2020")) %>% 
+  select(state, date,
+         previous_day_admission_adult_covid_confirmed,
+         previous_day_admission_pediatric_covid_confirmed,
+         previous_day_admission_adult_covid_suspected,
+         previous_day_admission_pediatric_covid_suspected) %>%
+  group_by(date) %>% 
+  summarize(confirmed = sum(previous_day_admission_adult_covid_confirmed, previous_day_admission_pediatric_covid_confirmed, na.rm = TRUE),
+            suspected = sum(previous_day_admission_adult_covid_suspected, previous_day_admission_pediatric_covid_suspected, na.rm = TRUE)) %>% 
+  pivot_longer(c(confirmed, suspected), names_to = "type", values_to = "cases") %>% 
+  mutate(type = str_to_title(type),
+         type = fct_relevel(type, c("Suspected", "Confirmed"))) %>% 
+  ggplot(aes(x = date, y = cases, fill = type)) + 
+  geom_col(width = 1) +
+  scale_x_date(date_breaks = "month", minor_breaks = NULL,
+               date_labels = "%b %y") +
+  scale_y_continuous(labels = scales::comma) + 
+  expand_limits(y = 0) +
+  labs(title = "New Hospital Admissions (Daily)",
+       y = "Cases", x = NULL, fill = "Status")
+```
