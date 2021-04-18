@@ -1,10 +1,27 @@
-data_url <- "https://healthdata.gov/api/views/anag-cw7u/rows.csv?accessType=DOWNLOAD"
-
+# COVID-19 Reported Patient Impact and Hospital Capacity by Facility
+# https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/anag-cw7u
 download.file(
-  url = data_url,
-  destfile = "data/reported_weekly_facility_level_capacity.csv"
+  url = "https://healthdata.gov/api/views/anag-cw7u/rows.csv?accessType=DOWNLOAD",
+  destfile = "data/reported_patient_impact_hospital_capacity_facility.csv"
 )
 
-file.copy(from = "data/reported_weekly_facility_level_capacity.csv",
-          to = "app/data/reported_weekly_facility_level_capacity.csv",
-          overwrite = TRUE)
+# COVID-19 Reported Patient Impact and Hospital Capacity by State Timeseries
+# https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/g62h-syeh
+download.file(
+  url = "https://healthdata.gov/api/views/g62h-syeh/rows.csv?accessType=DOWNLOAD",
+  destfile = "data/reported_patient_impact_hospital_capacity_state.csv"
+)
+
+# COVID-19 Community Profile Report - National-Level
+# https://healthdata.gov/dataset/COVID-19-Community-Profile-Report-National-Level/gzn6-r8g2
+download.file(
+  url = "https://healthdata.gov/api/views/gzn6-r8g2/rows.csv?accessType=DOWNLOAD",
+  destfile = "data/cpr_national.csv"
+)
+
+# United States COVID-19 Cases and Deaths by State over Time
+# https://data.cdc.gov/Case-Surveillance/United-States-COVID-19-Cases-and-Deaths-by-State-o/9mfq-cb36
+download.file(
+  url = "https://data.cdc.gov/api/views/9mfq-cb36/rows.csv?accessType=DOWNLOAD",
+  destfile = "data/cases_and_deaths_state_timeseries.csv"
+)
