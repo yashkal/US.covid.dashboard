@@ -25,3 +25,10 @@ download.file(
   url = "https://data.cdc.gov/api/views/9mfq-cb36/rows.csv?accessType=DOWNLOAD",
   destfile = "data/cases_and_deaths_state_timeseries.csv"
 )
+
+# COVID-19 Diagnostic Laboratory Testing (PCR Testing) Time Series
+# https://healthdata.gov/dataset/COVID-19-Diagnostic-Laboratory-Testing-PCR-Testing/j8mb-icvb
+download.file(
+  url = "https://healthdata.gov/api/views/j8mb-icvb/rows.csv?accessType=DOWNLOAD",
+  destfile = "data/pcr_testing_timeseries.csv"
+)

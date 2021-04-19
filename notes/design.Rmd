@@ -271,13 +271,18 @@ hospital_metrics %>%
 
 # Historial Information
 
-```{r state_timeseries}
+### New admissions
+
+```{r load_historical_data}
 # Timeseries for state
 state_utilization_timeseries <- vroom("https://healthdata.gov/api/views/g62h-syeh/rows.csv?accessType=DOWNLOAD")
+
+pcr_testing_timeseries <- vroom(here::here("data", "pcr_testing_timeseries.csv"))
+
+cases_and_death_state_timeseries <- vroom(here::here("data", "cases_and_deaths_state_timeseries.csv"))
 ```
 
-
-```{r daily_hospital_admissions}
+```{r historical_hospital_admissions}
 theme_set(theme_bw())
 state_utilization_timeseries %>% 
   filter(date > lubridate::mdy("Aug 01 2020")) %>% 
@@ -293,11 +298,58 @@ state_utilization_timeseries %>%
   mutate(type = str_to_title(type),
          type = fct_relevel(type, c("Suspected", "Confirmed"))) %>% 
   ggplot(aes(x = date, y = cases, fill = type)) + 
-  geom_col(width = 1) +
+  geom_col(width = 1, alpha = 0.75) +
   scale_x_date(date_breaks = "month", minor_breaks = NULL,
-               date_labels = "%b %y") +
+               date_labels = "%b '%y") +
   scale_y_continuous(labels = scales::comma) + 
+  scale_fill_manual(values = c("gray75", "gray20")) +
   expand_limits(y = 0) +
-  labs(title = "New Hospital Admissions (Daily)",
-       y = "Cases", x = NULL, fill = "Status")
+  labs(title = "New Hospital Admissions",
+       y = NULL, x = NULL, fill = "COVID-19 Status")
+```
+
+```{r historical_pcr_testing}
+pcr_testing_timeseries %>%
+  group_by(date, overall_outcome) %>% 
+  summarize(new_results_reported = sum(new_results_reported)) %>% 
+  arrange(desc(date), overall_outcome) %>% 
+  add_tally(new_results_reported) %>% 
+  filter(overall_outcome == "Positive") %>% 
+  mutate(test_positivity = new_results_reported/n) %>% 
+  ggplot(aes(x = date, y = test_positivity)) +
+  geom_col(width = 1, alpha = 0.75) +
+  scale_x_date(minor_breaks = "month", date_labels = "%b '%y") +
+  scale_y_continuous(labels = scales::percent) +
+  labs(x = NULL, y = NULL, title = "Viral (RT-PCR) Lab Test Positivity")
+  
+```
+
+```{r historical_deaths}
+cases_and_death_state_timeseries %>%
+  mutate(submission_date = lubridate::mdy(submission_date)) %>% 
+  filter(submission_date > lubridate::mdy("Mar 1 2020")) %>% 
+  select(1:2, new_death) %>% 
+  arrange(desc(submission_date), state, new_death) %>%
+  count(submission_date, wt = new_death) %>% 
+  arrange(submission_date) %>% 
+  ggplot(aes(x = submission_date, y = n)) +
+  geom_col(width = 1, alpha = 0.75) +
+  scale_x_date(minor_breaks = "month", date_labels = "%b '%y") +
+  labs(x = NULL, y = NULL, title = "Deaths Due to Coronavirus")
+```
+
+```{r historical_new_cases}
+cases_and_death_state_timeseries %>%
+  mutate(submission_date = lubridate::mdy(submission_date)) %>% 
+  filter(submission_date > lubridate::mdy("Mar 1 2020")) %>% 
+  select(1:2, new_case) %>% 
+  arrange(desc(submission_date), state, new_case) %>%
+  # filter(submission_date == min(submission_date)) %>%
+  count(submission_date, wt = new_case) %>% 
+  arrange(submission_date) %>% 
+  ggplot(aes(x = submission_date, y = n)) +
+  geom_col(width = 1, alpha = 0.75) +
+  scale_x_date(minor_breaks = "month", date_labels = "%b '%y") +
+  scale_y_continuous(labels = scales::label_number(scale = 1/1e3, suffix = "k")) +
+  labs(x = NULL, y = NULL, title = "New COVID-19 Cases")
 ```

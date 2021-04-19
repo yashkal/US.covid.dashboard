@@ -14,8 +14,10 @@ theme_set(theme_bw(base_size = 16))
 # Load data
 state_utilization_timeseries <- vroom(here::here("data", "reported_patient_impact_hospital_capacity_state.csv"))
 cpr_national <- vroom(here::here("data", "cpr_national.csv"))
-latest_cases_deaths <- vroom(here::here("data", "cases_and_deaths_state_timeseries.csv")) %>% 
-    mutate(submission_date = lubridate::mdy(submission_date)) %>% 
+pcr_testing_timeseries <- vroom(here::here("data", "pcr_testing_timeseries.csv"))
+cases_and_death_state_timeseries <- vroom(here::here("data", "cases_and_deaths_state_timeseries.csv")) %>% 
+    mutate(submission_date = lubridate::mdy(submission_date))
+latest_cases_deaths <- cases_and_death_state_timeseries %>% 
     filter(submission_date >= max(submission_date) - lubridate::days(7))
 
 # Calculate Statistics
@@ -51,7 +53,7 @@ conus <- us_states %>%
     filter(NAME %in% setdiff(state.name, c("Hawaii", "Alaska"))) %>% 
     st_bbox()
 
-plot_new_admissions <- reactive({
+plot_historical_hospital_admissions <- reactive({
     state_utilization_timeseries %>% 
         filter(date > lubridate::mdy("Aug 01 2020")) %>% 
         select(state, date,
@@ -66,16 +68,64 @@ plot_new_admissions <- reactive({
         mutate(type = str_to_title(type),
                type = fct_relevel(type, c("Suspected", "Confirmed"))) %>% 
         ggplot(aes(x = date, y = cases, fill = type)) + 
-        geom_col(width = 1) +
-        scale_x_date(date_breaks = "month", minor_breaks = NULL,
-                     date_labels = "%b %y") +
+        geom_col(width = 1, alpha = 0.75) +
+        scale_x_date(minor_breaks = "month", date_labels = "%b '%y") +
         scale_y_continuous(labels = scales::comma) + 
+        scale_fill_manual(values = c("gray75", "gray20")) +
         expand_limits(y = 0) +
-        labs(title = "New Hospital Admissions (Daily)",
-             y = "Cases", x = NULL, fill = "Status")
+        labs(title = "New Hospital Admissions Based on COVID Status",
+             y = NULL, x = NULL, fill = NULL)
+})
+
+plot_historical_pcr_testing <- reactive({
+    pcr_testing_timeseries %>%
+        group_by(date, overall_outcome) %>% 
+        summarize(new_results_reported = sum(new_results_reported)) %>% 
+        arrange(desc(date), overall_outcome) %>% 
+        add_tally(new_results_reported) %>% 
+        filter(overall_outcome == "Positive") %>% 
+        mutate(test_positivity = new_results_reported/n) %>% 
+        ggplot(aes(x = date, y = test_positivity)) +
+        geom_col(width = 1, alpha = 0.75) +
+        scale_x_date(minor_breaks = "month", date_labels = "%b '%y") +
+        scale_y_continuous(labels = scales::percent) +
+        labs(x = NULL, y = NULL, title = "Viral (RT-PCR) Lab Test Positivity")
+})
+
+plot_historical_deaths <- reactive({
+    cases_and_death_state_timeseries %>%
+        filter(submission_date > lubridate::mdy("Mar 1 2020")) %>% 
+        select(1:2, new_death) %>% 
+        arrange(desc(submission_date), state, new_death) %>%
+        count(submission_date, wt = new_death) %>% 
+        arrange(submission_date) %>% 
+        ggplot(aes(x = submission_date, y = n)) +
+        geom_col(width = 1, alpha = 0.75) +
+        scale_x_date(minor_breaks = "month", date_labels = "%b '%y") +
+        labs(x = NULL, y = NULL, title = "Deaths Due to Coronavirus")
+})
+
+plot_historical_new_cases <- reactive({
+    cases_and_death_state_timeseries %>%
+        filter(submission_date > lubridate::mdy("Mar 1 2020")) %>% 
+        select(1:2, new_case) %>% 
+        arrange(desc(submission_date), state, new_case) %>%
+        # filter(submission_date == min(submission_date)) %>%
+        count(submission_date, wt = new_case) %>% 
+        arrange(submission_date) %>% 
+        ggplot(aes(x = submission_date, y = n)) +
+        geom_col(width = 1, alpha = 0.75) +
+        scale_x_date(minor_breaks = "month", date_labels = "%b '%y") +
+        scale_y_continuous(labels = scales::label_number(scale = 1/1e3, suffix = "k")) +
+        labs(x = NULL, y = NULL, title = "New COVID-19 Cases")
 })
 
 # User Interface ----
+shortage_choices <- setNames(
+    c("percent_staffing_shortage_today", "percent_staffing_shortage_anticipated_within_week"),
+    c("% Staffing Shortage Today", "% Anticipated Shortage Next Week")
+)
+
 
 body <- dashboardBody(
     tabItems(
@@ -114,11 +164,24 @@ body <- dashboardBody(
                     icon = shiny::icon("percent")
                 )
             ),
-            h1("Staffing Shortages"),
-            radioButtons("expected_shortage", NULL, choices = shortage_choices),
-            tmapOutput("plotStaffingShortages")
+            fluidPage(
+                h1("Staffing Shortages"),
+                box(radioButtons("expected_shortage", NULL, choices = shortage_choices)),
+                box(tmapOutput("plotStaffingShortages"), width = 12)
+            )
         ),
-        tabItem(tabName = "history", plotOutput("plotNewAdmissions"))
+        tabItem(
+            tabName = "history",
+            h1("Historical Trends"),
+            fluidRow(
+                box(plotOutput("plotNewCases")),
+                box(plotOutput("plotPCRTesting"))
+            ),
+            fluidRow(
+                box(plotOutput("plotDeaths")),
+                box(plotOutput("plotNewAdmissions"))
+            )
+        )
     )
 )
 
@@ -127,7 +190,7 @@ ui <- dashboardPage(
     dashboardSidebar(
         sidebarMenu(
             menuItem("Summary", tabName = "summary"),
-            menuItem("History", tabName = "history")
+            menuItem("Historical Trends", tabName = "history")
         )
     ),
     body
@@ -135,7 +198,10 @@ ui <- dashboardPage(
 
 # Server ----
 server <- function(input, output) {
-    output$plotNewAdmissions <- renderPlot(plot_new_admissions())
+    output$plotNewAdmissions <- renderPlot(plot_historical_hospital_admissions())
+    output$plotNewCases <- renderPlot(plot_historical_new_cases())
+    output$plotDeaths <- renderPlot(plot_historical_deaths())
+    output$plotPCRTesting <- renderPlot(plot_historical_pcr_testing())
     output$plotStaffingShortages <- renderTmap({
         us_states %>% 
             left_join(state_utilization_metrics, by = c("STUSPS" = "state")) %>% 

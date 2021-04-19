@@ -227,11 +227,11 @@ library(vroom)</code></pre>
 <p><a href="https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/anag-cw7u">Source</a></p>
 <p><a href="https://github.com/CareSet/COVID_Hospital_PUF">Github</a></p>
 <p><a href="https://www.hhs.gov/sites/default/files/covid-19-faqs-hospitals-hospital-laboratory-acute-care-facility-data-reporting.pdf">Hospital Reporting FAQs</a></p>
-<pre class="r"><code>df &lt;- vroom(here::here(&quot;data&quot;,&quot;reported_weekly_facility_level_capacity.csv&quot;)) %&gt;%
+<pre class="r"><code>df &lt;- vroom(here::here(&quot;data&quot;,&quot;reported_patient_impact_hospital_capacity_facility.csv&quot;)) %&gt;%
   select(hospital_pk:is_metro_micro, inpatient_beds_7_day_sum, 
          ends_with(&quot;avg&quot;), starts_with(&quot;previous&quot;),
          geocoded_hospital_address)</code></pre>
-<p>This dataset contains 35 weeks worth of data ( from 2020-07-31 to 2021-03-26 ). There are 5062 hospitals reporting. Most counties average 2.0332522 hospitals in their area. They have recently updated the information to include geocoded addresses. This information contains the latitude and longitude of the hospitals.</p>
+<p>This dataset contains 37 weeks worth of data ( from 2020-07-31 to 2021-04-09 ). There are 5062 hospitals reporting. Most counties average 2.0340771 hospitals in their area. They have recently updated the information to include geocoded addresses. This information contains the latitude and longitude of the hospitals.</p>
 <pre class="r"><code># Keep locations in separate dataframe
 locations &lt;- df %&gt;%
   distinct(hospital_pk, state, city, address, zip, geocoded_hospital_address) %&gt;% 
