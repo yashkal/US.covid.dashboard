@@ -3,6 +3,9 @@ library(tidyverse)
 library(vroom)
 library(shiny)
 library(shinydashboard)
+library(sf)
+library(tigris)
+library(tmap)
 
 # Setup ----
 shinyOptions(plot.autocolors = TRUE)
@@ -28,7 +31,26 @@ national_summary_stats <- cpr_national %>%
             sum()
     )
 
+state_utilization_metrics <-  state_utilization_timeseries %>% 
+    filter(date == max(date)) %>% 
+    # Staffing shortage metrics
+    mutate(
+        percent_staffing_shortage_today = critical_staffing_shortage_today_yes/(critical_staffing_shortage_today_yes + critical_staffing_shortage_today_no),
+        percent_staffing_shortage_anticipated_within_week = critical_staffing_shortage_anticipated_within_week_yes/(critical_staffing_shortage_anticipated_within_week_yes + critical_staffing_shortage_anticipated_within_week_no)
+    ) %>% 
+    # For labels
+    mutate(
+        shortage = paste(critical_staffing_shortage_today_yes, critical_staffing_shortage_today_yes +  critical_staffing_shortage_today_no, sep = "/"),
+        anticipated_shortage = paste(critical_staffing_shortage_anticipated_within_week_yes, critical_staffing_shortage_anticipated_within_week_yes +  critical_staffing_shortage_anticipated_within_week_no, sep = "/"),
+    )
+
 # Plots ----
+us_states <- states(cb = TRUE, resolution = "20m", progress_bar = FALSE)
+
+conus <- us_states %>% 
+    filter(NAME %in% setdiff(state.name, c("Hawaii", "Alaska"))) %>% 
+    st_bbox()
+
 plot_new_admissions <- reactive({
     state_utilization_timeseries %>% 
         filter(date > lubridate::mdy("Aug 01 2020")) %>% 
@@ -56,39 +78,46 @@ plot_new_admissions <- reactive({
 # User Interface ----
 
 body <- dashboardBody(
-    fluidRow(
-        infoBox(
-            title = "Total Cases",
-            value = national_summary_stats$tot_cases,
-            icon = icon("lungs-virus")
+    fluidPage(
+        h1("Weekly Summary"),
+        fluidRow(
+            infoBox(
+                title = "Total Cases",
+                value = national_summary_stats$tot_cases,
+                icon = icon("lungs-virus")
+            ),
+            infoBox(
+                title = "New Cases (Last 7 days)",
+                value = national_summary_stats$cases_last_7_days,
+                icon = icon("bed")
+            ),
+            infoBox(
+                title = "Percent Change (Last 7 days)",
+                value = national_summary_stats$cases_pct_change_from_previous_week,
+                icon = shiny::icon("percent")
+            ),
+            infoBox(
+                title = "Total Deaths",
+                value = national_summary_stats$tot_death,
+                icon = icon("book-dead")
+            ),
+            infoBox(
+                title = "New Deaths (Last 7 days)",
+                value = national_summary_stats$deaths_last_7_days,
+                icon = icon("dizzy")
+            ),
+            infoBox(
+                title = "Percent Change (Last 7 days)",
+                value = national_summary_stats$deaths_pct_change_from_prev_week,
+                icon = shiny::icon("percent")
+            )
         ),
-        infoBox(
-            title = "New Cases (Last 7 days)",
-            value = national_summary_stats$cases_last_7_days,
-            icon = icon("bed")
-        ),
-        infoBox(
-            title = "Percent Change (Last 7 days)",
-            value = national_summary_stats$cases_pct_change_from_previous_week,
-            icon = shiny::icon("percent")
-        ),
-        infoBox(
-            title = "Total Deaths",
-            value = national_summary_stats$tot_death,
-            icon = icon("book-dead")
-        ),
-        infoBox(
-            title = "New Deaths (Last 7 days)",
-            value = national_summary_stats$deaths_last_7_days,
-            icon = icon("dizzy")
-        ),
-        infoBox(
-            title = "Percent Change (Last 7 days)",
-            value = national_summary_stats$deaths_pct_change_from_prev_week,
-            icon = shiny::icon("percent")
-        )
-    ),
-    plotOutput("plotNewAdmissions"))
+        plotOutput("plotNewAdmissions"),
+        h1("Staffing Shortages"),
+        radioButtons("expected_shortage", NULL, choices = shortage_choices),
+        tmapOutput("plotStaffingShortages")
+    )
+)
 
 ui <- dashboardPage(
     dashboardHeader(title = "COVID 19 Dashboard"),
@@ -99,6 +128,17 @@ ui <- dashboardPage(
 # Server ----
 server <- function(input, output) {
     output$plotNewAdmissions <- renderPlot(plot_new_admissions())
+    output$plotStaffingShortages <- renderTmap({
+        us_states %>% 
+            left_join(state_utilization_metrics, by = c("STUSPS" = "state")) %>% 
+            tm_shape(bbox = conus) +
+            tm_polygons(input$expected_shortage, 
+                        title = names(shortage_choices)[which(input$expected_shortage == shortage_choices)],
+                        id = "NAME", palette = "Oranges",
+                        popup.vars = c(
+                            "Hospitals with staffing shortage" = "shortage",
+                            "Hospitals anticipating shortage" = "anticipated_shortage"))
+    })
 }
 
 # Run app ----

@@ -1,0 +1,90 @@
+---
+title: "Interactive components"
+output:
+  html_document:
+    df_print: paged
+    code_folding: "hide"
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
+```
+
+```{r}
+library(tidyverse)
+library(vroom)
+library(shiny)
+library(sf)
+library(tigris)
+library(tmap)
+```
+
+## Interactive map
+
+```{r}
+state_utilization <- vroom("https://healthdata.gov/api/views/6xf2-c3ie/rows.csv?accessType=DOWNLOAD")
+```
+
+```{r}
+state_utilization_metrics <-  state_utilization %>% 
+  # Staffing shortage metrics
+  mutate(
+    percent_staffing_shortage_today = critical_staffing_shortage_today_yes/(critical_staffing_shortage_today_yes + critical_staffing_shortage_today_no),
+    percent_staffing_shortage_anticipated_within_week = critical_staffing_shortage_anticipated_within_week_yes/(critical_staffing_shortage_anticipated_within_week_yes + critical_staffing_shortage_anticipated_within_week_no)
+  ) %>% 
+  # For labels
+  mutate(
+    shortage = paste(critical_staffing_shortage_today_yes, critical_staffing_shortage_today_yes +  critical_staffing_shortage_today_no, sep = "/"),
+    anticipated_shortage = paste(critical_staffing_shortage_anticipated_within_week_yes, critical_staffing_shortage_anticipated_within_week_yes +  critical_staffing_shortage_anticipated_within_week_no, sep = "/"),
+  )
+
+us_states <- states(cb = TRUE, resolution = "20m", progress_bar = FALSE)
+
+conus <- us_states %>% 
+  filter(NAME %in% setdiff(state.name, c("Hawaii", "Alaska"))) %>% 
+  st_bbox()
+```
+
+```{r eval = FALSE, echo = FALSE}
+glimpse(state_utilization_metrics)
+
+metric_choices <- setNames(
+  c("percent_staffing_shortage", "inpatient_beds_utilization"),
+  c("% Staffing Shortage", "Inpatient bed utilization")
+)
+  
+# metric_choices <- c("perc_staffing_shortage", "inpatient_beds_utilization")
+
+# c("% Staffing Shortage", "Inpatient bed utilization", "")
+# c("percent_staffing_shortage", "perc_anticipated_shoratge", "staffed_adult_icu_bed_occupancy", "inpatient_beds_utilization", "inpatient_bed_covid_utilization", "adult_icu_bed_utilization")
+```
+
+
+```{r}
+
+shortage_choices <- setNames(
+  c("percent_staffing_shortage_today", "percent_staffing_shortage_anticipated_within_week"),
+  c("% Staffing Shortage Today", "% Anticipated Shortage Next Week")
+)
+
+radioButtons("expected_shortage", NULL,
+             choices = shortage_choices)
+```
+
+```{r}
+renderTmap({
+  us_states %>% 
+    left_join(state_utilization_metrics, by = c("STUSPS" = "state")) %>% 
+    tm_shape(bbox = conus) +
+    tm_polygons(input$expected_shortage, 
+                title = names(shortage_choices)[which(input$expected_shortage == shortage_choices)],
+                id = "NAME", palette = "Oranges",
+                popup.vars = c(
+                  "Hospitals with staffing shortage" = "shortage",
+                  "Hospitals anticipating shortage" = "anticipated_shortage"
+                  
+                )
+    )
+})
+```
