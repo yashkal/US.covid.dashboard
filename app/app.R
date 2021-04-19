@@ -78,50 +78,58 @@ plot_new_admissions <- reactive({
 # User Interface ----
 
 body <- dashboardBody(
-    fluidPage(
-        h1("Weekly Summary"),
-        fluidRow(
-            infoBox(
-                title = "Total Cases",
-                value = national_summary_stats$tot_cases,
-                icon = icon("lungs-virus")
+    tabItems(
+        tabItem(
+            tabName = "summary",
+            h1("Weekly Summary"),
+            fluidRow(
+                infoBox(
+                    title = "Total Cases",
+                    value = national_summary_stats$tot_cases,
+                    icon = icon("lungs-virus")
+                ),
+                infoBox(
+                    title = "New Cases (Last 7 days)",
+                    value = national_summary_stats$cases_last_7_days,
+                    icon = icon("bed")
+                ),
+                infoBox(
+                    title = "Percent Change (Last 7 days)",
+                    value = national_summary_stats$cases_pct_change_from_previous_week,
+                    icon = shiny::icon("percent")
+                ),
+                infoBox(
+                    title = "Total Deaths",
+                    value = national_summary_stats$tot_death,
+                    icon = icon("book-dead")
+                ),
+                infoBox(
+                    title = "New Deaths (Last 7 days)",
+                    value = national_summary_stats$deaths_last_7_days,
+                    icon = icon("dizzy")
+                ),
+                infoBox(
+                    title = "Percent Change (Last 7 days)",
+                    value = national_summary_stats$deaths_pct_change_from_prev_week,
+                    icon = shiny::icon("percent")
+                )
             ),
-            infoBox(
-                title = "New Cases (Last 7 days)",
-                value = national_summary_stats$cases_last_7_days,
-                icon = icon("bed")
-            ),
-            infoBox(
-                title = "Percent Change (Last 7 days)",
-                value = national_summary_stats$cases_pct_change_from_previous_week,
-                icon = shiny::icon("percent")
-            ),
-            infoBox(
-                title = "Total Deaths",
-                value = national_summary_stats$tot_death,
-                icon = icon("book-dead")
-            ),
-            infoBox(
-                title = "New Deaths (Last 7 days)",
-                value = national_summary_stats$deaths_last_7_days,
-                icon = icon("dizzy")
-            ),
-            infoBox(
-                title = "Percent Change (Last 7 days)",
-                value = national_summary_stats$deaths_pct_change_from_prev_week,
-                icon = shiny::icon("percent")
-            )
+            h1("Staffing Shortages"),
+            radioButtons("expected_shortage", NULL, choices = shortage_choices),
+            tmapOutput("plotStaffingShortages")
         ),
-        plotOutput("plotNewAdmissions"),
-        h1("Staffing Shortages"),
-        radioButtons("expected_shortage", NULL, choices = shortage_choices),
-        tmapOutput("plotStaffingShortages")
+        tabItem(tabName = "history", plotOutput("plotNewAdmissions"))
     )
 )
 
 ui <- dashboardPage(
     dashboardHeader(title = "COVID 19 Dashboard"),
-    dashboardSidebar(),
+    dashboardSidebar(
+        sidebarMenu(
+            menuItem("Summary", tabName = "summary"),
+            menuItem("History", tabName = "history")
+        )
+    ),
     body
 )
 
