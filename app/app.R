@@ -19,6 +19,9 @@ cases_and_death_state_timeseries <- vroom(here::here("data", "cases_and_deaths_s
     mutate(submission_date = lubridate::mdy(submission_date))
 latest_cases_deaths <- cases_and_death_state_timeseries %>% 
     filter(submission_date >= max(submission_date) - lubridate::days(7))
+df_tbl <- vroom(here::here("data", "cpr_county.csv"))
+us_counties <- counties(cb = TRUE, resolution = "20m", progress_bar = FALSE) %>% 
+    mutate(fips = as.numeric(paste0(STATEFP, COUNTYFP)))
 
 # Calculate Statistics
 national_summary_stats <- cpr_national %>% 
@@ -126,6 +129,21 @@ shortage_choices <- setNames(
     c("% Staffing Shortage Today", "% Anticipated Shortage Next Week")
 )
 
+metric_choices <- setNames(
+    c("cases_last_7_days", "cases_per_100k_last_7_days", "cases_pct_change_from_prev_week",
+      "deaths_last_7_days", "deaths_per_100k_last_7_days", "deaths_pct_change_from_prev_week",
+      "test_positivity_rate_last_7_days", "test_positivity_rate_pct_change_from_prev_week",
+      "confirmed_covid_hosp_per_100_beds_last_7_days", "confirmed_covid_hosp_per_100_beds_pct_change_from_prev_week",
+      "pct_inpatient_beds_used_covid_avg_last_7_days", "pct_inpatient_beds_used_covid_abs_change_from_prev_week",
+      "pct_icu_beds_used_covid_avg_last_7_days", "pct_icu_beds_used_covid_abs_change_from_prev_week"),
+    c("Cases", "Cases per 100k", "% Change in Cases per 100k",
+      "Deaths", "Deaths per 100k", "% Change in Cases per 100k",
+      "Viral (RT-PCR) Lab Test Positivity", "Change in Viral Lab Test Positivity",
+      "COVID-19 Confirmed Hospital Admissions per 100 beds", "% Change in Confirmed COVID-19 Admissions per 100 beds",
+      "Hospital Inpatient Utilization for COVID-19 Patients", "Change in Inpatient Utilization for COVID-19 Patients",
+      "Adult ICU Utilization for COVID-19 Patients", "Change in Adult ICU Utilization for COVID-19 Patients")
+)
+
 
 body <- dashboardBody(
     tabItems(
@@ -181,6 +199,17 @@ body <- dashboardBody(
                 box(plotOutput("plotDeaths")),
                 box(plotOutput("plotNewAdmissions"))
             )
+        ),
+        tabItem(
+            tabName = "count_state_drilldown",
+            sidebarLayout(
+                box(
+                    selectInput("state", "Choose state", setNames(state.abb, state.name)),
+                    selectInput("metric", "Choose metric", metric_choices),
+                    width = 3
+                ),
+                box(tmapOutput("plotStateCountyDrilldown"), width = 9)
+            )
         )
     )
 )
@@ -190,6 +219,7 @@ ui <- dashboardPage(
     dashboardSidebar(
         sidebarMenu(
             menuItem("Summary", tabName = "summary"),
+            menuItem("County/State Drilldown", tabName = "count_state_drilldown"),
             menuItem("Historical Trends", tabName = "history")
         )
     ),
@@ -212,6 +242,15 @@ server <- function(input, output) {
                         popup.vars = c(
                             "Hospitals with staffing shortage" = "shortage",
                             "Hospitals anticipating shortage" = "anticipated_shortage"))
+    })
+    output$plotStateCountyDrilldown <- renderTmap({
+        us_counties %>% 
+            left_join(df_tbl) %>%
+            filter(input$state == state) %>% 
+            tm_shape() +
+            tm_polygons(input$metric,
+                        title = names(metric_choices)[which(input$metric == metric_choices)],
+                        id = "NAME")
     })
 }
 

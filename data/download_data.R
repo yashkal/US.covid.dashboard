@@ -19,6 +19,13 @@ download.file(
   destfile = "data/cpr_national.csv"
 )
 
+# COVID-19 Community Profile Report - County-Level
+# https://healthdata.gov/dataset/COVID-19-Community-Profile-Report-County-Level/di4u-7yu6
+download.file(
+  url = "https://healthdata.gov/api/views/di4u-7yu6/rows.csv?accessType=DOWNLOAD",
+  destfile = "data/cpr_county.csv"
+)
+
 # United States COVID-19 Cases and Deaths by State over Time
 # https://data.cdc.gov/Case-Surveillance/United-States-COVID-19-Cases-and-Deaths-by-State-o/9mfq-cb36
 download.file(
