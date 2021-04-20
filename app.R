@@ -12,14 +12,14 @@ shinyOptions(plot.autocolors = TRUE)
 theme_set(theme_bw(base_size = 16))
 
 # Load data
-state_utilization_timeseries <- vroom(here::here("data", "reported_patient_impact_hospital_capacity_state.csv"))
-cpr_national <- vroom(here::here("data", "cpr_national.csv"))
-pcr_testing_timeseries <- vroom(here::here("data", "pcr_testing_timeseries.csv"))
-cases_and_death_state_timeseries <- vroom(here::here("data", "cases_and_deaths_state_timeseries.csv")) %>% 
+state_utilization_timeseries <- vroom(here::here("test_data", "reported_patient_impact_hospital_capacity_state.csv"))
+cpr_national <- vroom(here::here("test_data", "cpr_national.csv"))
+pcr_testing_timeseries <- vroom(here::here("test_data", "pcr_testing_timeseries.csv"))
+cases_and_death_state_timeseries <- vroom(here::here("test_data", "cases_and_deaths_state_timeseries.csv")) %>% 
     mutate(submission_date = lubridate::mdy(submission_date))
 latest_cases_deaths <- cases_and_death_state_timeseries %>% 
     filter(submission_date >= max(submission_date) - lubridate::days(7))
-df_tbl <- vroom(here::here("data", "cpr_county.csv"))
+df_tbl <- vroom(here::here("test_data", "cpr_county.csv"))
 us_counties <- counties(cb = TRUE, resolution = "20m", progress_bar = FALSE) %>% 
     mutate(fips = as.numeric(paste0(STATEFP, COUNTYFP)))
 
