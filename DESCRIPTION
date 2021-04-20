@@ -1,0 +1,14 @@
+Package: US.covid.dashboard
+Title: US COVID-19 Dashboard
+Version: 0.0.0.9000
+Authors@R: 
+    person(given = "Yash",
+           family = "Kalebere",
+           role = c("aut", "cre"),
+           email = "ysk25@dragons.drexel.edu")
+Description: A Shiny App that provides users an information tool to track key metrics on the coronavirus pandemic using hospital data published the US government. 
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.1.1
