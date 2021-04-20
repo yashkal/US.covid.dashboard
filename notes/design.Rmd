@@ -18,8 +18,11 @@ library(vroom)
 library(sf)
 library(tigris)
 library(tmap)
+pkgload::load_all()
 
 options(tigris_use_cache = TRUE)
+
+covid_datasets <- get_data()
 ```
 
 # Plan for dashboards
@@ -67,9 +70,9 @@ Some of the calculations provided for these reports can be found online. The tab
 
 ```{r cpr_national_stats_summary}
 # Load data
-cpr_national <- vroom("https://healthdata.gov/api/views/gzn6-r8g2/rows.csv?accessType=DOWNLOAD")
+cpr_national <- covid_datasets$cpr_national
 
-latest_cases_deaths <- vroom("https://data.cdc.gov/api/views/9mfq-cb36/rows.csv?accessType=DOWNLOAD") %>% 
+latest_cases_deaths <- covid_datasets$cases_and_deaths_state_timeseries %>% 
   mutate(submission_date = lubridate::mdy(submission_date)) %>% 
   filter(submission_date >= max(submission_date) - lubridate::days(7))
 
@@ -115,7 +118,7 @@ latest_cases_deaths %>%
 There is also CPR detailing information at the county level. These can can important when developing interactive maps. This should be detailed when querying state or county level information.
 
 ```{r cpr_county, eval = FALSE}
-cpr_county <- vroom("https://healthdata.gov/api/views/di4u-7yu6/rows.csv?accessType=DOWNLOAD")
+cpr_county <- covid_datasets$cpr_county
 ```
 
 
@@ -124,7 +127,7 @@ cpr_county <- vroom("https://healthdata.gov/api/views/di4u-7yu6/rows.csv?accessT
 The above metrics come from facility level data.
 
 ```{r read_and_clean_data, message=FALSE, warning=FALSE}
-df <- vroom(here::here("data","reported_patient_impact_hospital_capacity_facility.csv")) %>%
+df <- covid_datasets$reported_patient_impact_hospital_capacity_facility %>%
   select(hospital_pk:is_metro_micro, inpatient_beds_7_day_sum, 
          ends_with("avg"), starts_with("previous"),
          geocoded_hospital_address)
@@ -276,9 +279,9 @@ hospital_metrics %>%
 # Timeseries for state
 state_utilization_timeseries <- vroom("https://healthdata.gov/api/views/g62h-syeh/rows.csv?accessType=DOWNLOAD")
 
-pcr_testing_timeseries <- vroom(here::here("data", "pcr_testing_timeseries.csv"))
+pcr_testing_timeseries <- covid_datasets$pcr_testing_timeseries
 
-cases_and_death_state_timeseries <- vroom(here::here("data", "cases_and_deaths_state_timeseries.csv"))
+cases_and_death_state_timeseries <- covid_datasets$cases_and_deaths_state_timeseries
 ```
 
 ```{r historical_hospital_admissions}
@@ -352,3 +355,7 @@ cases_and_death_state_timeseries %>%
   scale_y_continuous(labels = scales::label_number(scale = 1/1e3, suffix = "k")) +
   labs(x = NULL, y = NULL, title = "New COVID-19 Cases")
 ```
+
+# Vaccination information
+
+TODO

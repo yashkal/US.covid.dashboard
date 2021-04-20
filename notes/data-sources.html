@@ -198,7 +198,10 @@ pre code {
 </div>
 
 <pre class="r"><code>library(tidyverse)
-library(vroom)</code></pre>
+library(vroom)
+pkgload::load_all()
+
+covid_datasets &lt;- get_data()</code></pre>
 <div id="community-profile-reports" class="section level2">
 <h2>Community Profile Reports</h2>
 <p><a href="https://healthdata.gov/Health/COVID-19-Community-Profile-Report/gqxm-d9w9">Source</a></p>
@@ -227,7 +230,7 @@ library(vroom)</code></pre>
 <p><a href="https://healthdata.gov/Hospital/COVID-19-Reported-Patient-Impact-and-Hospital-Capa/anag-cw7u">Source</a></p>
 <p><a href="https://github.com/CareSet/COVID_Hospital_PUF">Github</a></p>
 <p><a href="https://www.hhs.gov/sites/default/files/covid-19-faqs-hospitals-hospital-laboratory-acute-care-facility-data-reporting.pdf">Hospital Reporting FAQs</a></p>
-<pre class="r"><code>df &lt;- vroom(here::here(&quot;data&quot;,&quot;reported_patient_impact_hospital_capacity_facility.csv&quot;)) %&gt;%
+<pre class="r"><code>df &lt;- covid_datasets$reported_patient_impact_hospital_capacity_facility %&gt;%
   select(hospital_pk:is_metro_micro, inpatient_beds_7_day_sum, 
          ends_with(&quot;avg&quot;), starts_with(&quot;previous&quot;),
          geocoded_hospital_address)</code></pre>

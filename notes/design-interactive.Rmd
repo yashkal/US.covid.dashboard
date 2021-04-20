@@ -18,6 +18,9 @@ library(shiny)
 library(sf)
 library(tigris)
 library(tmap)
+pkgload::load_all()
+
+covid_datasets <- get_data()
 ```
 
 ## Interactive map
@@ -62,7 +65,6 @@ metric_choices <- setNames(
 
 
 ```{r}
-
 shortage_choices <- setNames(
   c("percent_staffing_shortage_today", "percent_staffing_shortage_anticipated_within_week"),
   c("% Staffing Shortage Today", "% Anticipated Shortage Next Week")
@@ -83,7 +85,6 @@ renderTmap({
                 popup.vars = c(
                   "Hospitals with staffing shortage" = "shortage",
                   "Hospitals anticipating shortage" = "anticipated_shortage"
-                  
                 )
     )
 })
@@ -93,7 +94,7 @@ renderTmap({
 
 ```{r eval=FALSE}
 # Load data 
-df <- vroom(here::here("data","reported_patient_impact_hospital_capacity_facility.csv")) %>% 
+df <- covid_datasets$reported_patient_impact_hospital_capacity_facility %>% 
   select(hospital_pk:is_metro_micro, inpatient_beds_7_day_sum, 
        ends_with("avg"), starts_with("previous"),
        geocoded_hospital_address) 
@@ -163,7 +164,7 @@ selectInput("metric", "Choose metric", metric_choices)
 ```
 
 ```{r}
-df_tbl <- vroom(here::here("data", "cpr_county.csv"))
+df_tbl <- covid_datasets$cpr_county
 us_counties <- counties(cb = TRUE, resolution = "20m", progress_bar = FALSE) %>% 
   mutate(fips = as.numeric(paste0(STATEFP, COUNTYFP)))
 

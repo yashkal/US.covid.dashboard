@@ -17,6 +17,9 @@ knitr::opts_chunk$set(echo = TRUE, message=FALSE)
 ```{r libraries, message=FALSE}
 library(tidyverse)
 library(vroom)
+pkgload::load_all()
+
+covid_datasets <- get_data()
 ```
 
 ## Community Profile Reports
@@ -57,7 +60,7 @@ Latest values obtained based on the last four days are obtained [here](https://h
 [Hospital Reporting FAQs](https://www.hhs.gov/sites/default/files/covid-19-faqs-hospitals-hospital-laboratory-acute-care-facility-data-reporting.pdf)
 
 ```{r read_and_clean_data, message=FALSE, warning=FALSE}
-df <- vroom(here::here("data","reported_patient_impact_hospital_capacity_facility.csv")) %>%
+df <- covid_datasets$reported_patient_impact_hospital_capacity_facility %>%
   select(hospital_pk:is_metro_micro, inpatient_beds_7_day_sum, 
          ends_with("avg"), starts_with("previous"),
          geocoded_hospital_address)

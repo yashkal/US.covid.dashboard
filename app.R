@@ -6,20 +6,22 @@ library(shinydashboard)
 library(sf)
 library(tigris)
 library(tmap)
+pkgload::load_all()
 
 # Setup ----
 shinyOptions(plot.autocolors = TRUE)
 theme_set(theme_bw(base_size = 16))
+covid_datasets <- get_data() # run download_datasets() to get latest data
 
 # Load data
-state_utilization_timeseries <- vroom(here::here("test_data", "reported_patient_impact_hospital_capacity_state.csv"))
-cpr_national <- vroom(here::here("test_data", "cpr_national.csv"))
-pcr_testing_timeseries <- vroom(here::here("test_data", "pcr_testing_timeseries.csv"))
-cases_and_death_state_timeseries <- vroom(here::here("test_data", "cases_and_deaths_state_timeseries.csv")) %>% 
+reported_patient_impact_hospital_capacity_state <- covid_datasets$reported_patient_impact_hospital_capacity_state
+cpr_national <- covid_datasets$cpr_national
+pcr_testing_timeseries <- covid_datasets$pcr_testing_timeseries
+cases_and_death_state_timeseries <- covid_datasets$cases_and_deaths_state_timeseries %>% 
     mutate(submission_date = lubridate::mdy(submission_date))
 latest_cases_deaths <- cases_and_death_state_timeseries %>% 
     filter(submission_date >= max(submission_date) - lubridate::days(7))
-df_tbl <- vroom(here::here("test_data", "cpr_county.csv"))
+cpr_county <- covid_datasets$cpr_county
 us_counties <- counties(cb = TRUE, resolution = "20m", progress_bar = FALSE) %>% 
     mutate(fips = as.numeric(paste0(STATEFP, COUNTYFP)))
 
@@ -36,7 +38,7 @@ national_summary_stats <- cpr_national %>%
             sum()
     )
 
-state_utilization_metrics <-  state_utilization_timeseries %>% 
+state_utilization_metrics <-  reported_patient_impact_hospital_capacity_state %>% 
     filter(date == max(date)) %>% 
     # Staffing shortage metrics
     mutate(
@@ -57,7 +59,7 @@ conus <- us_states %>%
     st_bbox()
 
 plot_historical_hospital_admissions <- reactive({
-    state_utilization_timeseries %>% 
+    reported_patient_impact_hospital_capacity_state %>% 
         filter(date > lubridate::mdy("Aug 01 2020")) %>% 
         select(state, date,
                previous_day_admission_adult_covid_confirmed,
@@ -245,7 +247,7 @@ server <- function(input, output) {
     })
     output$plotStateCountyDrilldown <- renderTmap({
         us_counties %>% 
-            left_join(df_tbl) %>%
+            left_join(cpr_county) %>%
             filter(input$state == state) %>% 
             tm_shape() +
             tm_polygons(input$metric,
