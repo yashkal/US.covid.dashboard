@@ -12,43 +12,6 @@ editor_options:
 knitr::opts_chunk$set(echo = TRUE, message = FALSE, warning = FALSE)
 ```
 
-# Plan for dashboards
-
-The plan for the application will allow users see information at a high level, and then be able to drill down at the hospital level for detailed information.
-
-- (TODO) First tab will have high level descriptive stats
-  - Includes info boxes highlighting changes (absolute and % change). The user will be able to toggle how far back to view changes (e.g. yesterday, a week, 30 days, 90 days)
-    - Total Cases
-    - New Cases
-    - New Deaths
-    - Maybe list states not reported in this information?
-  - Shows an interactive map of states that report hospital staffing shortages and other metrics
-- (TODO) Second tab will show US map broken by states
-  - (TODO) Will include hospital locations as well
-  - (TODO) Will also contain a table to include data for hospitals without locations
-- Last tab will show changes in metrics over time for individual hospitals
-  - (TODO) Add options to choose metrics (e.g. new cases, percent full, etc.)
-- (TODO) Last tab will be a documentation page
-  - Shows users how the app is organized/how to use it
-  - Detail sources used for the application
-  - Disclaimer for data not including some hospitals
-
-Important information to consider (all need to have disclaimer for possible incomplete reporting):
-
-- Descriptive Statistics for cases and deaths (used for info boxes)
-  - Cumulative
-  - Change from last 7 days
-  - Percent change from last 7 days
-- National Time series (New and total)
-  - Hospital admissions (suspected and confirmed)
-  - Cases
-  - Deaths
-  - Vaccinations
-  - Viral (RT-PCR) Lab Test Positivity
-- Cases by state/county for above metrics. Consider being able to compare values using cases per 100k
-  - Add markers for individual hospitals as well
-- Have a page for hospital metrics (disclaimer)
-
 ```{r load_libraries}
 library(tidyverse)
 library(vroom)
@@ -58,6 +21,42 @@ library(tmap)
 
 options(tigris_use_cache = TRUE)
 ```
+
+# Plan for dashboards
+
+The plan for the application will allow users see information at a high level, and then be able to drill down at the hospital level for detailed information.
+
+- National Summary
+  - Needs proper formatting and organization for info boxes
+  - Currently first tab has absolute and % change going back 7 days. This information can be pulled directly from HHS, but additional calculations from raw data needs to be performed if the user wants to view these changes further back in time (e.g. yesterday, a week, 30 days, 90 days)
+  - Consider identifying number of hospitals not reporting staffing shortages for the map
+  - Add per 100k metrics to compare data between states
+- Historical trends
+  - Consider using ggplotly to add interactivity to charts
+- State/County Drilldown
+  - Show summary
+  - Include hospital locations as well? or show this in different tabs
+  - Will also contain a table to include data for hospitals without locations
+  - Will need to fix leaflet maps for dropdowns overlaying graphs
+- Hospital Profiles
+  - Create a summary page to show how hospitals are doing in the pandemic
+  - Descriptive Statistics for cases and deaths (used for info boxes)
+    - Cumulative
+    - Change from last 7 days
+    - Percent change from last 7 days
+  - Examples of above statistics
+    - Hospital admissions (suspected and confirmed)
+    - Cases
+    - Deaths
+    - Viral (RT-PCR) Lab Test Positivity
+- Vaccinations
+  - Possible create a time series to identify vaccinations?
+- About
+  - Shows users how the app is organized/how to use it
+  - Detail sources used for the application
+  - Disclaimer for data not including some hospitals
+
+Important information to consider (all need to have disclaimer for possible incomplete reporting):
 
 # National Level Charts
 
