@@ -192,12 +192,12 @@ runApp <- function(){
         tabName = "history",
         h1("Historical Trends"),
         fluidRow(
-          box(plotOutput("plotNewCases")),
-          box(plotOutput("plotPCRTesting"))
+          box(shinycssloaders::withSpinner(plotOutput("plotNewCases"))),
+          box(shinycssloaders::withSpinner(plotOutput("plotPCRTesting")))
         ),
         fluidRow(
-          box(plotOutput("plotDeaths")),
-          box(plotOutput("plotNewAdmissions"))
+          box(shinycssloaders::withSpinner(plotOutput("plotDeaths"))),
+          box(shinycssloaders::withSpinner(plotOutput("plotNewAdmissions")))
         )
       ),
       tabItem(

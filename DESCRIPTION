@@ -16,6 +16,7 @@ Imports:
     rappdirs,
     sf,
     shiny,
+    shinycssloaders,
     shinydashboard,
     tigris,
     tmap,
