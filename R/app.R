@@ -7,7 +7,7 @@ library(shinydashboard)
 # library(tigris)
 library(tmap)
 
-runApp <- function(){
+runApp <- function(host = '0.0.0.0', port = 3838){
   # Setup ----
   shiny::shinyOptions(plot.autocolors = TRUE)
   theme_set(theme_bw(base_size = 16))
@@ -255,5 +255,6 @@ runApp <- function(){
   }
   
   # Run app ----
-  shinyApp(ui, server)
+  app <- shinyApp(ui, server)
+  shiny::runApp(app, host = host, port = port)
 }
