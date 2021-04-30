@@ -24,9 +24,6 @@ app <- function(){
     mutate(submission_date = lubridate::mdy(submission_date))
   latest_cases_deaths <- cases_and_death_state_timeseries %>% 
     filter(submission_date >= max(submission_date) - lubridate::days(7))
-  cpr_county <- covid_datasets$cpr_county
-  us_counties <- tigris::counties(cb = TRUE, resolution = "20m", progress_bar = FALSE) %>% 
-    mutate(fips = as.numeric(paste0(STATEFP, COUNTYFP)))
   us_states <- tigris::states(cb = TRUE, resolution = "20m", progress_bar = FALSE)
   conus <- us_states %>% 
     filter(NAME %in% setdiff(state.name, c("Hawaii", "Alaska"))) %>% 
@@ -63,22 +60,6 @@ app <- function(){
     c("percent_staffing_shortage_today", "percent_staffing_shortage_anticipated_within_week"),
     c("% Staffing Shortage Today", "% Anticipated Shortage Next Week")
   )
-  
-  metric_choices <- setNames(
-    c("cases_last_7_days", "cases_per_100k_last_7_days", "cases_pct_change_from_prev_week",
-      "deaths_last_7_days", "deaths_per_100k_last_7_days", "deaths_pct_change_from_prev_week",
-      "test_positivity_rate_last_7_days", "test_positivity_rate_pct_change_from_prev_week",
-      "confirmed_covid_hosp_per_100_beds_last_7_days", "confirmed_covid_hosp_per_100_beds_pct_change_from_prev_week",
-      "pct_inpatient_beds_used_covid_avg_last_7_days", "pct_inpatient_beds_used_covid_abs_change_from_prev_week",
-      "pct_icu_beds_used_covid_avg_last_7_days", "pct_icu_beds_used_covid_abs_change_from_prev_week"),
-    c("Cases", "Cases per 100k", "% Change in Cases per 100k",
-      "Deaths", "Deaths per 100k", "% Change in Cases per 100k",
-      "Viral (RT-PCR) Lab Test Positivity", "Change in Viral Lab Test Positivity",
-      "COVID-19 Confirmed Hospital Admissions per 100 beds", "% Change in Confirmed COVID-19 Admissions per 100 beds",
-      "Hospital Inpatient Utilization for COVID-19 Patients", "Change in Inpatient Utilization for COVID-19 Patients",
-      "Adult ICU Utilization for COVID-19 Patients", "Change in Adult ICU Utilization for COVID-19 Patients")
-  )
-  
   
   body <- dashboardBody(
     tabItems(
@@ -124,6 +105,10 @@ app <- function(){
         )
       ),
       tabItem(
+        tabName = "count_state_drilldown",
+        drilldownPlotUI("ex1")
+      ),
+      tabItem(
         tabName = "history",
         h1("Historical Trends"),
         fluidRow(
@@ -133,17 +118,6 @@ app <- function(){
         fluidRow(
           box(shinycssloaders::withSpinner(plotOutput("plotDeaths"))),
           box(shinycssloaders::withSpinner(plotOutput("plotNewAdmissions")))
-        )
-      ),
-      tabItem(
-        tabName = "count_state_drilldown",
-        sidebarLayout(
-          box(
-            selectInput("state", "Choose state", setNames(state.abb, state.name)),
-            selectInput("metric", "Choose metric", metric_choices),
-            width = 3
-          ),
-          box(tmap::tmapOutput("plotStateCountyDrilldown"), width = 9)
         )
       )
     )
@@ -178,15 +152,7 @@ app <- function(){
                       "Hospitals with staffing shortage" = "shortage",
                       "Hospitals anticipating shortage" = "anticipated_shortage"))
     })
-    output$plotStateCountyDrilldown <- tmap::renderTmap({
-      us_counties %>% 
-        left_join(cpr_county) %>%
-        filter(input$state == state) %>% 
-        tm_shape() +
-        tm_polygons(input$metric,
-                    title = names(metric_choices)[which(input$metric == metric_choices)],
-                    id = "NAME")
-    })
+    drilldownPlotServer("ex1")
   }
   
   shinyApp(ui, server)
