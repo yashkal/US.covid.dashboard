@@ -11,9 +11,9 @@ plot_historical_hospital_admissions <- shiny::reactive({
     group_by(date) %>% 
     summarize(confirmed = sum(previous_day_admission_adult_covid_confirmed, previous_day_admission_pediatric_covid_confirmed, na.rm = TRUE),
               suspected = sum(previous_day_admission_adult_covid_suspected, previous_day_admission_pediatric_covid_suspected, na.rm = TRUE)) %>% 
-    pivot_longer(c(confirmed, suspected), names_to = "type", values_to = "cases") %>% 
-    mutate(type = str_to_title(type),
-           type = fct_relevel(type, c("Suspected", "Confirmed"))) %>% 
+    tidyr::pivot_longer(c(confirmed, suspected), names_to = "type", values_to = "cases") %>% 
+    mutate(type = stringr::str_to_title(type),
+           type = forcats::fct_relevel(type, c("Suspected", "Confirmed"))) %>% 
     ggplot(aes(x = date, y = cases, fill = type)) + 
     geom_col(width = 1, alpha = 0.75) +
     scale_x_date(minor_breaks = "month", date_labels = "%b '%y") +

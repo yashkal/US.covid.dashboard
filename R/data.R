@@ -1,4 +1,4 @@
-datasets_tbl <- tibble(
+datasets_tbl <- tibble::tibble(
   name = c(
     "reported_patient_impact_hospital_capacity_facility",
     "reported_patient_impact_hospital_capacity_state",
@@ -17,6 +17,7 @@ datasets_tbl <- tibble(
   )
 )
 
+#' @export
 download_datasets <- function() {
   if (!dir.exists(data_cache())){
     dir.create(data_cache(), recursive = TRUE)

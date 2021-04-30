@@ -1,12 +1,14 @@
 ## app.R ##
-library(shiny)
-library(shinydashboard)
-library(tmap)
-
+#' @export
 runApp <- function(host = '0.0.0.0', port = 3838){
   shiny::runApp(app(), host = host, port = port)
 }
 
+#' @import shiny
+#' @import shinydashboard
+#' @import tmap
+#' @import dplyr
+#' @import ggplot2
 app <- function(){
   # Setup ----
   shiny::shinyOptions(plot.autocolors = TRUE)
@@ -45,7 +47,7 @@ app <- function(){
       tabItem(
         tabName = "summary",
         h1("Weekly Summary"),
-        fluidRow(pmap(info_tbl(), summaryInfoBox)),
+        fluidRow(purrr::pmap(info_tbl(), summaryInfoBox)),
         fluidPage(
           h1("Staffing Shortages"),
           box(radioButtons("expected_shortage", NULL, choices = shortage_choices)),
