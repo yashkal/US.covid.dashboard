@@ -45,7 +45,7 @@ app <- function(){
       tabItem(
         tabName = "summary",
         h1("Weekly Summary"),
-        fluidRow(pmap(info_tbl, summaryInfoBox)),
+        fluidRow(pmap(info_tbl(), summaryInfoBox)),
         fluidPage(
           h1("Staffing Shortages"),
           box(radioButtons("expected_shortage", NULL, choices = shortage_choices)),
