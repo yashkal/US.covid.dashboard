@@ -1,4 +1,4 @@
-metrics_df <- tibble(
+metrics_df <- tibble::tibble(
   var = c(
     "cases_last_7_days", 
     #"cases_per_100k_last_7_days", "cases_pct_change_from_prev_week",
@@ -42,7 +42,7 @@ metrics_df <- tibble(
 
 us_states <- tigris::states(cb = TRUE, resolution = "20m", progress_bar = FALSE)
 conus <- us_states %>% 
-  filter(NAME %in% setdiff(state.name, c("Hawaii", "Alaska"))) %>% 
+  dplyr::filter(NAME %in% setdiff(state.name, c("Hawaii", "Alaska"))) %>% 
   sf::st_bbox()
 
 drilldownPlotUI <- function(id, label = "drilldown") {
@@ -73,8 +73,8 @@ drilldownPlotServer <- function(id) {
           tm_shape(bbox = if (input$state == "All") conus else NULL) +
           tm_polygons(input$metric,
                       title = metrics_df %>% filter(var == input$metric) %>% pull(title),
-                      breaks = metrics_df %>% filter(var == input$metric) %>% pull(breaks) %>% pluck(1),
-                      palette = metrics_df %>% filter(var == input$metric) %>% pull(color_palette) %>% pluck(1),
+                      breaks = metrics_df %>% filter(var == input$metric) %>% pull(breaks) %>% purrr::pluck(1),
+                      palette = metrics_df %>% filter(var == input$metric) %>% pull(color_palette) %>% purrr::pluck(1),
                       id = "NAME")
       })
     }
