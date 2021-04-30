@@ -7,7 +7,7 @@ Authors@R:
            role = c("aut", "cre"),
            email = "ysk25@dragons.drexel.edu")
 Description: A Shiny App that provides users an information tool to track key metrics on the coronavirus pandemic using hospital data published the US government. 
-License: MIT + file LICENSE
+License: MIT
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)

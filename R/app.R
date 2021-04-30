@@ -1,10 +1,6 @@
 ## app.R ##
-# library(tidyverse)
-# library(vroom)
 library(shiny)
 library(shinydashboard)
-# library(sf)
-# library(tigris)
 library(tmap)
 
 runApp <- function(host = '0.0.0.0', port = 3838){
@@ -19,29 +15,12 @@ app <- function(){
   
   # Load data
   reported_patient_impact_hospital_capacity_state <- covid_datasets$reported_patient_impact_hospital_capacity_state
-  cpr_national <- covid_datasets$cpr_national
-  cases_and_death_state_timeseries <- covid_datasets$cases_and_deaths_state_timeseries %>% 
-    mutate(submission_date = lubridate::mdy(submission_date))
-  latest_cases_deaths <- cases_and_death_state_timeseries %>% 
-    filter(submission_date >= max(submission_date) - lubridate::days(7))
   us_states <- tigris::states(cb = TRUE, resolution = "20m", progress_bar = FALSE)
   conus <- us_states %>% 
     filter(NAME %in% setdiff(state.name, c("Hawaii", "Alaska"))) %>% 
     sf::st_bbox()
   
   # Calculate Statistics
-  national_summary_stats <- cpr_national %>% 
-    mutate(
-      tot_cases = latest_cases_deaths %>%
-        filter(submission_date == max(submission_date)) %>% 
-        pull(tot_cases) %>% 
-        sum(),
-      tot_death = latest_cases_deaths %>% 
-        filter(submission_date == max(submission_date)) %>% 
-        pull(tot_death) %>% 
-        sum()
-    )
-  
   state_utilization_metrics <-  reported_patient_impact_hospital_capacity_state %>% 
     filter(date == max(date)) %>% 
     # Staffing shortage metrics
@@ -66,38 +45,7 @@ app <- function(){
       tabItem(
         tabName = "summary",
         h1("Weekly Summary"),
-        fluidRow(
-          infoBox(
-            title = "Total Cases",
-            value = national_summary_stats$tot_cases,
-            icon = icon("lungs-virus")
-          ),
-          infoBox(
-            title = "New Cases (Last 7 days)",
-            value = national_summary_stats$cases_last_7_days,
-            icon = icon("bed")
-          ),
-          infoBox(
-            title = "Percent Change (Last 7 days)",
-            value = national_summary_stats$cases_pct_change_from_previous_week,
-            icon = shiny::icon("percent")
-          ),
-          infoBox(
-            title = "Total Deaths",
-            value = national_summary_stats$tot_death,
-            icon = icon("book-dead")
-          ),
-          infoBox(
-            title = "New Deaths (Last 7 days)",
-            value = national_summary_stats$deaths_last_7_days,
-            icon = icon("dizzy")
-          ),
-          infoBox(
-            title = "Percent Change (Last 7 days)",
-            value = national_summary_stats$deaths_pct_change_from_prev_week,
-            icon = shiny::icon("percent")
-          )
-        ),
+        fluidRow(pmap(info_tbl, summaryInfoBox)),
         fluidPage(
           h1("Staffing Shortages"),
           box(radioButtons("expected_shortage", NULL, choices = shortage_choices)),
