@@ -28,3 +28,7 @@ Imports:
     vroom (>= 1.4.0)
 Depends: 
     magrittr
+Suggests: 
+    rmarkdown,
+    knitr
+VignetteBuilder: knitr
