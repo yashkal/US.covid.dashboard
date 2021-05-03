@@ -13,6 +13,7 @@ app <- function(){
   # Setup ----
   shiny::shinyOptions(plot.autocolors = TRUE)
   theme_set(theme_bw(base_size = 16))
+  download_datasets()
   covid_datasets <- get_data() # run download_datasets() to get latest data
   
   # Load data

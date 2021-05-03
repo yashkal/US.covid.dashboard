@@ -1,6 +1,6 @@
 datasets_tbl <- tibble::tibble(
   name = c(
-    "reported_patient_impact_hospital_capacity_facility",
+    # "reported_patient_impact_hospital_capacity_facility",
     "reported_patient_impact_hospital_capacity_state",
     "cpr_national",
     "cpr_county",
@@ -8,7 +8,7 @@ datasets_tbl <- tibble::tibble(
     "pcr_testing_timeseries"
   ),
   url = c(
-    "https://healthdata.gov/api/views/anag-cw7u/rows.csv?accessType=DOWNLOAD",
+    # "https://healthdata.gov/api/views/anag-cw7u/rows.csv?accessType=DOWNLOAD",
     "https://healthdata.gov/api/views/g62h-syeh/rows.csv?accessType=DOWNLOAD",
     "https://healthdata.gov/api/views/gzn6-r8g2/rows.csv?accessType=DOWNLOAD",
     "https://healthdata.gov/api/views/di4u-7yu6/rows.csv?accessType=DOWNLOAD",

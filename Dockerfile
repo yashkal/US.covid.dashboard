@@ -4,13 +4,13 @@ RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get clean
 
-RUN install2.r \
-    tidyverse \
-    sf \
-    tigris \
-    tmap \
-    shinydashboard \
-    shinycssloaders
+#RUN install2.r \
+#    tidyverse \
+#    sf \
+#    tigris \
+#    tmap \
+#    shinydashboard \
+#    shinycssloaders
 
 COPY . /src
 WORKDIR /src
@@ -18,6 +18,6 @@ WORKDIR /src
 RUN Rscript -e "devtools::install()"
 
 # Load datasets into cache, will need to remove to get latest data
-RUN Rscript -e "US.covid.dashboard::download_datasets()"
+# RUN Rscript -e "US.covid.dashboard::download_datasets()"
 
-CMD ["Rscript", "-e", "pkgload::load_all(); runApp()"]
+CMD ["Rscript", "-e", "US.covid.dashboard::runApp()"]
