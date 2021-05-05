@@ -1,7 +1,7 @@
 ## app.R ##
 #' @export
-runApp <- function(host = '0.0.0.0', port = 3838){
-  shiny::runApp(app(), host = host, port = port)
+runApp <- function(host = '0.0.0.0', port = 3838, prod = FALSE){
+  shiny::runApp(app(prod = prod), host = host, port = port)
 }
 
 #' @import shiny
@@ -10,12 +10,14 @@ runApp <- function(host = '0.0.0.0', port = 3838){
 #' @import dplyr
 #' @import ggplot2
 #' @export
-app <- function(){
+app <- function(prod = FALSE){
   # Setup ----
   shiny::shinyOptions(plot.autocolors = TRUE)
   theme_set(theme_bw(base_size = 16))
-  download_datasets()
-  covid_datasets <- get_data() # run download_datasets() to get latest data
+  if (prod){
+    download_datasets()
+  }
+  covid_datasets <- get_data()
   
   # Load data
   reported_patient_impact_hospital_capacity_state <- covid_datasets$reported_patient_impact_hospital_capacity_state
