@@ -14,7 +14,10 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1
 Imports: 
     dplyr,
+    forcats,
     ggplot2,
+    lubridate,
+    pkgload,
     purrr,
     rappdirs (>= 0.3.3),
     sf (>= 0.9.8),

@@ -9,6 +9,7 @@ runApp <- function(host = '0.0.0.0', port = 3838){
 #' @import tmap
 #' @import dplyr
 #' @import ggplot2
+#' @export
 app <- function(){
   # Setup ----
   shiny::shinyOptions(plot.autocolors = TRUE)
