@@ -20,6 +20,7 @@ Imports:
     pkgload,
     purrr,
     rappdirs (>= 0.3.3),
+    scales,
     sf (>= 0.9.8),
     shiny (>= 1.6.0),
     shinycssloaders (>= 1.0.0),

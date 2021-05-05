@@ -1,5 +1,5 @@
-summaryInfoBox <- function(title, value, icon_name){
-  infoBox(title = title, value = value, icon = icon(icon_name))
+summaryInfoBox <- function(title, value, icon_name, format_fun){
+  infoBox(title = title, value = format_fun(value), icon = icon(icon_name))
 }
 
 info_tbl <- function() {
@@ -24,9 +24,10 @@ info_tbl <- function() {
     )
   
   info_tbl <- tibble(
-    title = c("Weekly Summary", "New Cases (Last 7 days)", "Percent Change (Last 7 days)", "Total Deaths", "New Deaths (Last 7 days)", "Percent Change (Last 7 days)"),
+    title = c("Total Cases", "New Cases (Last 7 days)", "Percent Change (Last 7 days)", "Total Deaths", "New Deaths (Last 7 days)", "Percent Change (Last 7 days)"),
     value = c(national_summary_stats$tot_cases, national_summary_stats$cases_last_7_days, national_summary_stats$cases_pct_change_from_previous_week, national_summary_stats$tot_death,national_summary_stats$deaths_last_7_days, national_summary_stats$deaths_pct_change_from_prev_week),
-    icon_name = c("lungs-virus", "bed", "percent", "book-dead", "dizzy", "percent")
+    icon_name = c("lungs-virus", "bed", "percent", "book-dead", "dizzy", "percent"),
+    format_fun = c(scales::comma_format(), scales::comma_format(), scales::percent_format(accuracy = 0.01), scales::comma_format(), scales::comma_format(), scales::percent_format(accuracy = 0.01))
   )
 }
 
