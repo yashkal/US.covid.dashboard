@@ -18,6 +18,10 @@ knitr::opts_chunk$set(
 <!-- badges: start -->
 <!-- badges: end -->
 
+App available at https://yash-kalebere.shinyapps.io/uscovid/
+
+## Description
+
 The goal of US.covid.dashboard is to provide users an information tool to track key metrics on the coronavirus pandemic using hospital data published the US government. Currently, this information is published as [Community Profile Reports](https://beta.healthdata.gov/Health/COVID-19-Community-Profile-Report/gqxm-d9w9) online. Although these reports are invaluable to decision makers, they might experience "report fatigue" from reading large pdf documents. This web application was created keeping the type of experience these end users may want in mind.
 
 ## Running the Application

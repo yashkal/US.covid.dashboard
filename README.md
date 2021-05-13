@@ -6,6 +6,10 @@
 <!-- badges: start -->
 <!-- badges: end -->
 
+App available at <https://yash-kalebere.shinyapps.io/uscovid/>
+
+## Description
+
 The goal of US.covid.dashboard is to provide users an information tool
 to track key metrics on the coronavirus pandemic using hospital data
 published the US government. Currently, this information is published as
