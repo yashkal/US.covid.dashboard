@@ -50,9 +50,9 @@ app <- function(prod = FALSE){
     tabItems(
       tabItem(
         tabName = "summary",
-        h1("Weekly Summary"),
-        fluidRow(purrr::pmap(info_tbl(), summaryInfoBox)),
         fluidPage(
+          h1("Weekly Summary"),
+          fluidRow(purrr::pmap(info_tbl(), summaryInfoBox)),
           h1("Staffing Shortages"),
           box(radioButtons("expected_shortage", NULL, choices = shortage_choices)),
           box(tmap::tmapOutput("plotStaffingShortages"), width = 12)
@@ -60,18 +60,22 @@ app <- function(prod = FALSE){
       ),
       tabItem(
         tabName = "count_state_drilldown",
-        drilldownPlotUI("ex1")
+        fluidPage(
+          drilldownPlotUI("ex1")
+        )
       ),
       tabItem(
         tabName = "history",
         h1("Historical Trends"),
-        fluidRow(
-          box(shinycssloaders::withSpinner(plotOutput("plotNewCases"))),
-          box(shinycssloaders::withSpinner(plotOutput("plotPCRTesting")))
-        ),
-        fluidRow(
-          box(shinycssloaders::withSpinner(plotOutput("plotDeaths"))),
-          box(shinycssloaders::withSpinner(plotOutput("plotNewAdmissions")))
+        fluidPage(
+          fluidRow(
+            box(shinycssloaders::withSpinner(plotOutput("plotNewCases"))),
+            box(shinycssloaders::withSpinner(plotOutput("plotPCRTesting")))
+          ),
+          fluidRow(
+            box(shinycssloaders::withSpinner(plotOutput("plotDeaths"))),
+            box(shinycssloaders::withSpinner(plotOutput("plotNewAdmissions")))
+          )
         )
       )
     )
